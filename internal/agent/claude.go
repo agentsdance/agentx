@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/agentsdance/agentx/internal/config"
+	"github.com/agentsdance/agentx/internal/plugins"
 	"github.com/agentsdance/agentx/internal/skills"
 )
 
@@ -128,4 +129,28 @@ func (a *ClaudeAgent) InstallSkill(skillName, source string) error {
 func (a *ClaudeAgent) RemoveSkill(skillName string) error {
 	mgr := skills.NewSkillManager()
 	return mgr.Remove(skillName, skills.ScopePersonal)
+}
+
+func (a *ClaudeAgent) SupportsPlugins() bool {
+	return true
+}
+
+func (a *ClaudeAgent) HasPlugin(pluginName string) (bool, error) {
+	mgr := plugins.NewPluginManager()
+	plugin, err := mgr.Get(pluginName)
+	if err != nil {
+		return false, nil // Not found is not an error
+	}
+	return plugin != nil, nil
+}
+
+func (a *ClaudeAgent) InstallPlugin(pluginName, source string) error {
+	mgr := plugins.NewPluginManager()
+	_, err := mgr.Install(source)
+	return err
+}
+
+func (a *ClaudeAgent) RemovePlugin(pluginName string) error {
+	mgr := plugins.NewPluginManager()
+	return mgr.Remove(pluginName)
 }

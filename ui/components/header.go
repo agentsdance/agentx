@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/agentsdance/agentx/internal/version"
 	"github.com/agentsdance/agentx/ui/theme"
 )
 
@@ -12,6 +13,7 @@ type HeaderStats struct {
 	MCPInstalled int
 	MCPTotal     int
 	SkillsCount  int
+	PluginsCount int
 	AgentsOnline int
 	AgentsTotal  int
 }
@@ -55,17 +57,23 @@ func (h Header) View() string {
 	title := titleStyle.Render(h.title)
 	subtitle := subtitleStyle.Render("Agent Extension: MCP Servers & Agent Skills Manager")
 
+	versionStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#6B7280")).
+		Padding(0, 1)
+	versionStr := versionStyle.Render(version.Version)
+
 	// Build stats string
 	statsStr := fmt.Sprintf(
-		"MCP: %d/%d  Skills: %d  Agents: %d/%d",
+		"MCP: %d/%d  Skills: %d  Plugins: %d  Agents: %d/%d",
 		h.stats.MCPInstalled, h.stats.MCPTotal,
 		h.stats.SkillsCount,
+		h.stats.PluginsCount,
 		h.stats.AgentsOnline, h.stats.AgentsTotal,
 	)
 	stats := statsStyle.Render(statsStr)
 
 	// Calculate spacing
-	leftPart := title + subtitle
+	leftPart := title + subtitle + versionStr
 	leftWidth := lipgloss.Width(leftPart)
 	statsWidth := lipgloss.Width(stats)
 	

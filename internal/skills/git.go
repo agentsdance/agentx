@@ -15,12 +15,13 @@ func GitClone(repoURL string) (string, error) {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
 	}
 
-	// Run git clone
-	cmd := exec.Command("git", "clone", "--depth", "1", repoURL, tmpDir)
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	// Run git clone with --quiet to suppress progress output
+	// This prevents messing up the TUI when running in interactive mode
+	cmd := exec.Command("git", "clone", "--depth", "1", "--quiet", repoURL, tmpDir)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
 		os.RemoveAll(tmpDir)
-		return "", fmt.Errorf("git clone failed: %w", err)
+		return "", fmt.Errorf("git clone failed: %w\n%s", err, string(output))
 	}
 
 	return tmpDir, nil

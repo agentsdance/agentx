@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    {
+      "name": "frontend-design",
+      "description": "Frontend design skill for UI/UX implementation",
+      "source": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/frontend-design",
+      "version": "1.0.0",
+      "author": "Anthropic",
+      "components": ["skills"]
+    }
+  ]
+}

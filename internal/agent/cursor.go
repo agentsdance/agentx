@@ -113,3 +113,19 @@ func (a *CursorAgent) InstallSkill(skillName, source string) error {
 func (a *CursorAgent) RemoveSkill(skillName string) error {
 	return nil
 }
+
+func (a *CursorAgent) SupportsPlugins() bool {
+	return false
+}
+
+func (a *CursorAgent) HasPlugin(pluginName string) (bool, error) {
+	return false, nil
+}
+
+func (a *CursorAgent) InstallPlugin(pluginName, source string) error {
+	return nil
+}
+
+func (a *CursorAgent) RemovePlugin(pluginName string) error {
+	return nil
+}
