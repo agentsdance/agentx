@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/agentsdance/agentx/internal/agent"
+	"github.com/agentsdance/agentx/internal/skills"
 	"github.com/agentsdance/agentx/ui/components"
 	"github.com/agentsdance/agentx/ui/theme"
 )
@@ -18,14 +19,39 @@ type AvailableSkill struct {
 	Source      string // GitHub tree URL or repo#fragment
 }
 
-// Available skills from anthropics/skills repository
-var AvailableSkills = []AvailableSkill{
-	{Name: "frontend-design", Description: "Production-grade UI design", Source: "https://github.com/anthropics/skills/tree/main/skills/frontend-design"},
-	{Name: "mcp-builder", Description: "Build MCP servers", Source: "https://github.com/anthropics/skills/tree/main/skills/mcp-builder"},
-	{Name: "pdf", Description: "PDF document handling", Source: "https://github.com/anthropics/skills/tree/main/skills/pdf"},
-	{Name: "docx", Description: "Word document handling", Source: "https://github.com/anthropics/skills/tree/main/skills/docx"},
-	{Name: "xlsx", Description: "Excel spreadsheet handling", Source: "https://github.com/anthropics/skills/tree/main/skills/xlsx"},
-	{Name: "pptx", Description: "PowerPoint handling", Source: "https://github.com/anthropics/skills/tree/main/skills/pptx"},
+// AvailableSkills is the list of skills from the registry
+var AvailableSkills []AvailableSkill
+
+// InitAvailableSkills fetches skills from the registry
+func InitAvailableSkills() {
+	registrySkills, err := skills.FetchSkillsRegistryWithFallback()
+	if err != nil {
+		// Use empty list if fetch fails
+		AvailableSkills = []AvailableSkill{}
+		return
+	}
+
+	AvailableSkills = make([]AvailableSkill, len(registrySkills))
+	for i, s := range registrySkills {
+		// Convert source to installation URL
+		source := s.Source
+		if source == "local" {
+			// For local skills in agentsdance/agentskills repo
+			source = fmt.Sprintf("https://github.com/agentsdance/agentskills/tree/master/skills/%s", s.Name)
+		}
+
+		// Truncate description for display
+		desc := s.Description
+		if len(desc) > 40 {
+			desc = desc[:37] + "..."
+		}
+
+		AvailableSkills[i] = AvailableSkill{
+			Name:        s.Name,
+			Description: desc,
+			Source:      source,
+		}
+	}
 }
 
 // AgentSkillStatus represents an agent's skill installation status
@@ -49,6 +75,9 @@ type SkillsView struct {
 
 // NewSkillsView creates a new skills view
 func NewSkillsView() *SkillsView {
+	// Initialize available skills from registry
+	InitAvailableSkills()
+
 	agents := agent.GetAllAgents()
 	statuses := make([]AgentSkillStatus, len(agents))
 
@@ -111,12 +140,22 @@ func (v *SkillsView) Update(msg tea.Msg) (View, tea.Cmd) {
 		case "c":
 			v.refreshStatus()
 			v.message = "Status refreshed"
+		case "R":
+			// Force refresh skills from registry
+			InitAvailableSkills()
+			v.refreshStatus()
+			v.message = fmt.Sprintf("Refreshed %d skills from registry", len(AvailableSkills))
 		}
 	}
 	return v, nil
 }
 
 func (v *SkillsView) installSelected() {
+	if len(AvailableSkills) == 0 {
+		v.message = "No skills available"
+		return
+	}
+
 	status := &v.agents[v.cursorCol]
 	agentName := status.Agent.Name()
 	skill := AvailableSkills[v.cursorRow]
@@ -140,6 +179,11 @@ func (v *SkillsView) installSelected() {
 }
 
 func (v *SkillsView) installAllForSelectedSkill() {
+	if len(AvailableSkills) == 0 {
+		v.message = "No skills available"
+		return
+	}
+
 	installed := 0
 	skill := AvailableSkills[v.cursorRow]
 
@@ -158,6 +202,11 @@ func (v *SkillsView) installAllForSelectedSkill() {
 }
 
 func (v *SkillsView) removeSelected() {
+	if len(AvailableSkills) == 0 {
+		v.message = "No skills available"
+		return
+	}
+
 	status := &v.agents[v.cursorCol]
 	agentName := status.Agent.Name()
 	skill := AvailableSkills[v.cursorRow]
@@ -225,8 +274,14 @@ func (v *SkillsView) View() string {
 	b.WriteString(borderStyle.Render("  " + strings.Repeat("─", 70)))
 	b.WriteString("\n")
 
+	// Check if skills are available
+	if len(AvailableSkills) == 0 {
+		b.WriteString("\n  No skills available. Press 'R' to refresh from registry.\n")
+		return b.String()
+	}
+
 	// Column headers (Agent names)
-	b.WriteString("                  ")
+	b.WriteString("                              ")
 	for i, status := range v.agents {
 		style := colHeaderStyle
 		if i == v.cursorCol {
@@ -251,12 +306,12 @@ func (v *SkillsView) View() string {
 			row.WriteString("  ")
 		}
 
-		// Skill name
+		// Skill name - width 28 characters for long names
 		name := skill.Name
-		if len(name) > 14 {
-			name = name[:14]
+		if len(name) > 28 {
+			name = name[:28]
 		}
-		row.WriteString(fmt.Sprintf("%-14s", name))
+		row.WriteString(fmt.Sprintf("%-28s", name))
 
 		// Status for each agent
 		for agentIdx, status := range v.agents {
@@ -316,6 +371,7 @@ func (v *SkillsView) ShortHelp() []components.FooterAction {
 		{Key: "←→", Label: "select agent"},
 		{Key: "↑↓", Label: "select skill"},
 		{Key: "c", Label: "check"},
+		{Key: "R", Label: "refresh"},
 		{Key: "q", Label: "quit"},
 	}
 }
