@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/agentsdance/agentx/internal/agent"
 	"github.com/agentsdance/agentx/ui/components"
+	"github.com/agentsdance/agentx/ui/theme"
 )
 
 // CodeAgentInfo represents information about a code agent
@@ -83,7 +84,7 @@ func (v *AgentsView) View() string {
 		Foreground(lipgloss.Color("#FFFFFF"))
 
 	borderStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#374151"))
+		Foreground(theme.SidebarBgColor)
 
 	activeStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#10B981"))
@@ -95,7 +96,7 @@ func (v *AgentsView) View() string {
 		Foreground(lipgloss.Color("#6B7280"))
 
 	selectedStyle := lipgloss.NewStyle().
-		Background(lipgloss.Color("#1F2937"))
+		Background(theme.SelectionBgColor)
 
 	// Header
 	b.WriteString(headerStyle.Render("  Code Agents"))

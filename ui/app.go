@@ -5,6 +5,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/agentsdance/agentx/internal/version"
 	"github.com/agentsdance/agentx/ui/components"
+	"github.com/agentsdance/agentx/ui/theme"
 	"github.com/agentsdance/agentx/ui/views"
 )
 
@@ -140,14 +141,14 @@ func (m AppModel) View() string {
 	leftActions := m.buildInnerFooter(m.layout.MainWidth - 2)
 	leftContentHeight := totalPaneHeight - 1 // 1 line for actions
 
-	leftTop := MainStyle.
+	leftTop := theme.MainStyle.
 		Width(m.layout.MainWidth).
 		Height(leftContentHeight).
 		MaxHeight(leftContentHeight).
 		Padding(1, 2).
 		Render(mainContent)
 
-	leftBottom := FooterStyle.
+	leftBottom := theme.FooterStyle.
 		Width(m.layout.MainWidth).
 		Height(1).
 		Render(leftActions)
@@ -161,14 +162,14 @@ func (m AppModel) View() string {
 		versionStr = "dev/v0.0.1"
 	}
 
-	rightTop := SidebarStyle.
+	rightTop := theme.SidebarStyle.
 		Width(m.layout.SidebarWidth).
 		Height(rightContentHeight).
 		MaxHeight(rightContentHeight).
 		Render(sidebarContent)
 
 	rightBottom := lipgloss.NewStyle().
-		Background(sidebarBgColor).
+		Background(theme.SidebarBgColor).
 		Foreground(lipgloss.Color("#4B5563")).
 		Width(m.layout.SidebarWidth).
 		Height(1).

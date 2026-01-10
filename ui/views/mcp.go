@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/agentsdance/agentx/internal/agent"
 	"github.com/agentsdance/agentx/ui/components"
+	"github.com/agentsdance/agentx/ui/theme"
 )
 
 // MCPServer represents an MCP server type
@@ -198,7 +199,7 @@ func (v *MCPView) View() string {
 		Foreground(lipgloss.Color("#FFFFFF"))
 
 	borderStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#374151"))
+		Foreground(theme.SidebarBgColor)
 
 	colHeaderStyle := lipgloss.NewStyle().
 		Bold(true).
@@ -206,7 +207,7 @@ func (v *MCPView) View() string {
 
 	colHeaderSelectedStyle := lipgloss.NewStyle().
 		Bold(true).
-		Foreground(lipgloss.Color("#7C3AED"))
+		Foreground(theme.SelectionBgColor)
 
 	installedStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#10B981")).
@@ -221,10 +222,10 @@ func (v *MCPView) View() string {
 		Width(14)
 
 	selectedRowStyle := lipgloss.NewStyle().
-		Background(lipgloss.Color("#1F2937"))
+		Background(theme.SelectionBgColor)
 
 	cursorCellStyle := lipgloss.NewStyle().
-		Background(lipgloss.Color("#374151")).
+		Background(theme.SelectionBgColor).
 		Bold(true).
 		Width(14)
 

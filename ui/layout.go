@@ -27,7 +27,7 @@ type Layout struct {
 const (
 	MinWidth        = 80
 	MinHeight       = 24
-	HeaderHeight    = 2
+	HeaderHeight    = 1
 	TabBarHeight    = 1
 	FooterHeight    = 1
 	SidebarMinWidth = 28

@@ -2,6 +2,7 @@ package components
 
 import (
 	"github.com/charmbracelet/lipgloss"
+	"github.com/agentsdance/agentx/ui/theme"
 )
 
 // TabItem represents a single tab
@@ -69,6 +70,6 @@ func (t TabBar) View() string {
 
 	return lipgloss.NewStyle().
 		Width(t.width).
-		Background(lipgloss.Color("#1F2937")).
+		Background(theme.TabBarBgColor).
 		Render(content)
 }

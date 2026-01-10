@@ -88,9 +88,12 @@ func (m *DefaultSkillManager) Install(source string, scope SkillScope) (*Skill, 
 	case SourceTypeLocal:
 		return m.installFromLocal(info.Path, scope)
 	case SourceTypeGitRepo:
-		return m.installFromGit(info.RepoURL, "", scope)
+		return m.installFromGit(info.RepoURL, "", "", scope)
 	case SourceTypeGitRepoWithFragment:
-		return m.installFromGit(info.RepoURL, info.Fragment, scope)
+		// Use SkillPath if available (from tree URLs), otherwise use Fragment
+		skillPath := info.SkillPath
+		fragment := info.Fragment
+		return m.installFromGit(info.RepoURL, fragment, skillPath, scope)
 	default:
 		return nil, fmt.Errorf("unsupported source type")
 	}
@@ -256,7 +259,9 @@ func (m *DefaultSkillManager) installFromLocal(sourcePath string, scope SkillSco
 }
 
 // installFromGit installs a skill from a git repository
-func (m *DefaultSkillManager) installFromGit(repoURL, fragment string, scope SkillScope) (*Skill, error) {
+// fragment is the skill name after # (e.g., repo#skill-name)
+// skillPath is the path within repo (e.g., from tree URLs like /skills/frontend-design)
+func (m *DefaultSkillManager) installFromGit(repoURL, fragment, skillPath string, scope SkillScope) (*Skill, error) {
 	// Clone the repository
 	tmpDir, err := GitClone(repoURL)
 	if err != nil {
@@ -264,11 +269,49 @@ func (m *DefaultSkillManager) installFromGit(repoURL, fragment string, scope Ski
 	}
 	defer CleanupTempDir(tmpDir)
 
-	// Find the skill in the repository
-	skillPath, err := FindSkillInRepo(tmpDir, fragment)
+	// Determine the skill location
+	var targetPath string
+	var lookupName string
+
+	if skillPath != "" {
+		// For tree URLs, use the full path within the repo
+		targetPath = filepath.Join(tmpDir, skillPath)
+		// Extract skill name from the path (last component)
+		lookupName = filepath.Base(skillPath)
+	} else {
+		lookupName = fragment
+	}
+
+	// If we have a direct path from tree URL, check it first
+	if targetPath != "" {
+		if isSkillDir(targetPath) {
+			skill, err := m.installSkillDir(targetPath, scope)
+			if err != nil {
+				return nil, err
+			}
+			skill.Source = repoURL
+			if skillPath != "" {
+				skill.Source = repoURL + "/tree/main/" + skillPath
+			}
+			return skill, nil
+		}
+		// Check if it's a command file
+		if isCommandFile(targetPath + ".md") {
+			skill, err := m.installCommandFile(targetPath+".md", scope)
+			if err != nil {
+				return nil, err
+			}
+			skill.Source = repoURL
+			return skill, nil
+		}
+		return nil, fmt.Errorf("skill not found at path: %s", skillPath)
+	}
+
+	// Find the skill in the repository using fragment
+	foundPath, err := FindSkillInRepo(tmpDir, lookupName)
 	if err != nil {
 		// Maybe it's a command file
-		cmdPath, cmdErr := FindCommandInRepo(tmpDir, fragment)
+		cmdPath, cmdErr := FindCommandInRepo(tmpDir, lookupName)
 		if cmdErr != nil {
 			return nil, err // Return original error
 		}
@@ -283,7 +326,7 @@ func (m *DefaultSkillManager) installFromGit(repoURL, fragment string, scope Ski
 		return skill, nil
 	}
 
-	skill, err := m.installSkillDir(skillPath, scope)
+	skill, err := m.installSkillDir(foundPath, scope)
 	if err != nil {
 		return nil, err
 	}
