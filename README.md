@@ -38,6 +38,10 @@ It provides both a command-line interface and an interactive terminal UI (TUI) f
 
 ## Installation
 
+### Download from Releases (Recommended)
+
+Download the latest pre-built binary for your platform from [GitHub Releases](https://github.com/agentsdance/agentx/releases).
+
 ### Build from Source
 
 ```bash
