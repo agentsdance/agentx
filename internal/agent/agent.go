@@ -28,6 +28,14 @@ type Agent interface {
 	InstallSkill(skillName, source string) error
 	// RemoveSkill removes a skill by name
 	RemoveSkill(skillName string) error
+	// SupportsPlugins returns true if the agent supports plugins
+	SupportsPlugins() bool
+	// HasPlugin checks if a plugin is installed
+	HasPlugin(pluginName string) (bool, error)
+	// InstallPlugin installs a plugin from a source URL
+	InstallPlugin(pluginName, source string) error
+	// RemovePlugin removes a plugin by name
+	RemovePlugin(pluginName string) error
 }
 
 // GetAllAgents returns all supported agents

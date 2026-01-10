@@ -127,3 +127,19 @@ func (a *GeminiAgent) InstallSkill(skillName, source string) error {
 func (a *GeminiAgent) RemoveSkill(skillName string) error {
 	return nil
 }
+
+func (a *GeminiAgent) SupportsPlugins() bool {
+	return false
+}
+
+func (a *GeminiAgent) HasPlugin(pluginName string) (bool, error) {
+	return false, nil
+}
+
+func (a *GeminiAgent) InstallPlugin(pluginName, source string) error {
+	return nil
+}
+
+func (a *GeminiAgent) RemovePlugin(pluginName string) error {
+	return nil
+}

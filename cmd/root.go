@@ -19,7 +19,7 @@ var rootCmd = &cobra.Command{
 Run without arguments to launch the TUI interface.
 
 Aliases: agents, ax`,
-	Version: version.Version,
+	Version: version.GetFullVersion(),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Launch TUI when no subcommand is provided
 		if err := ui.Run(); err != nil {
@@ -37,9 +37,11 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.SetVersionTemplate("{{.Version}}\n")
 	rootCmd.AddCommand(installCmd)
 	rootCmd.AddCommand(checkCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(removeCmd)
 	rootCmd.AddCommand(skillsCmd)
+	rootCmd.AddCommand(pluginsCmd)
 }

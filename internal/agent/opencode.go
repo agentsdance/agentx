@@ -127,3 +127,19 @@ func (a *OpenCodeAgent) InstallSkill(skillName, source string) error {
 func (a *OpenCodeAgent) RemoveSkill(skillName string) error {
 	return nil
 }
+
+func (a *OpenCodeAgent) SupportsPlugins() bool {
+	return false
+}
+
+func (a *OpenCodeAgent) HasPlugin(pluginName string) (bool, error) {
+	return false, nil
+}
+
+func (a *OpenCodeAgent) InstallPlugin(pluginName, source string) error {
+	return nil
+}
+
+func (a *OpenCodeAgent) RemovePlugin(pluginName string) error {
+	return nil
+}

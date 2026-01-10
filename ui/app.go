@@ -10,17 +10,19 @@ import (
 )
 
 const (
-	TabMCP    = 0
-	TabSkills = 1
-	TabAgents = 2
+	TabMCP     = 0
+	TabSkills  = 1
+	TabPlugins = 2
+	TabAgents  = 3
 )
 
 // AppModel is the main TUI application model
 type AppModel struct {
 	// Views
-	mcpView    *views.MCPView
-	skillsView *views.SkillsView
-	agentsView *views.AgentsView
+	mcpView     *views.MCPView
+	skillsView  *views.SkillsView
+	pluginsView *views.PluginsView
+	agentsView  *views.AgentsView
 
 	// Components
 	tabBar  components.TabBar
@@ -41,23 +43,26 @@ func NewAppModel() AppModel {
 	// Initialize views
 	mcpView := views.NewMCPView()
 	skillsView := views.NewSkillsView()
+	pluginsView := views.NewPluginsView()
 	agentsView := views.NewAgentsView()
 
 	// Initialize tab bar
 	tabBar := components.NewTabBar([]components.TabItem{
 		{Name: "MCP Servers", Icon: "⬡", Active: true},
 		{Name: "Skills", Icon: "🛠", Active: false},
+		{Name: "Plugins", Icon: "📦", Active: false},
 		{Name: "Code Agents", Icon: ">_", Active: false},
 	})
 
 	// Initialize header
 	header := components.NewHeader("AgentX")
 	header.SetStats(components.HeaderStats{
-		MCPInstalled: mcpView.GetInstalledCount(),
-		MCPTotal:     mcpView.GetTotalCount(),
-		SkillsCount:  skillsView.GetSkillsCount(),
-		AgentsOnline: agentsView.GetOnlineCount(),
-		AgentsTotal:  agentsView.GetTotalCount(),
+		MCPInstalled:  mcpView.GetInstalledCount(),
+		MCPTotal:      mcpView.GetTotalCount(),
+		SkillsCount:   skillsView.GetSkillsCount(),
+		PluginsCount:  pluginsView.GetPluginsCount(),
+		AgentsOnline:  agentsView.GetOnlineCount(),
+		AgentsTotal:   agentsView.GetTotalCount(),
 	})
 
 	// Initialize sidebar
@@ -69,14 +74,15 @@ func NewAppModel() AppModel {
 	footer := components.NewFooter(mcpView.ShortHelp())
 
 	return AppModel{
-		mcpView:    mcpView,
-		skillsView: skillsView,
-		agentsView: agentsView,
-		tabBar:     tabBar,
-		header:     header,
-		sidebar:    sidebar,
-		footer:     footer,
-		activeTab:  TabMCP,
+		mcpView:     mcpView,
+		skillsView:  skillsView,
+		pluginsView: pluginsView,
+		agentsView:  agentsView,
+		tabBar:      tabBar,
+		header:      header,
+		sidebar:     sidebar,
+		footer:      footer,
+		activeTab:   TabMCP,
 	}
 }
 
@@ -104,16 +110,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "2":
 			m.switchTab(TabSkills)
 		case "3":
+			m.switchTab(TabPlugins)
+		case "4":
 			m.switchTab(TabAgents)
 
 		case "tab":
 			// Cycle through tabs
-			nextTab := (m.activeTab + 1) % 3
+			nextTab := (m.activeTab + 1) % 4
 			m.switchTab(nextTab)
 
 		case "shift+tab":
 			// Cycle backwards
-			prevTab := (m.activeTab - 1 + 3) % 3
+			prevTab := (m.activeTab - 1 + 4) % 4
 			m.switchTab(prevTab)
 
 		default:
@@ -208,6 +216,8 @@ func (m *AppModel) buildInnerFooter(width int) string {
 		actions = m.mcpView.ShortHelp()
 	case TabSkills:
 		actions = m.skillsView.ShortHelp()
+	case TabPlugins:
+		actions = m.pluginsView.ShortHelp()
 	case TabAgents:
 		actions = m.agentsView.ShortHelp()
 	}
@@ -238,6 +248,10 @@ func (m *AppModel) switchTab(tab int) {
 		m.footer.SetActions(m.skillsView.ShortHelp())
 		m.footer.SetMessage(m.skillsView.Message())
 		m.sidebar.SetSections(m.skillsView.GetSidebarSections())
+	case TabPlugins:
+		m.footer.SetActions(m.pluginsView.ShortHelp())
+		m.footer.SetMessage(m.pluginsView.Message())
+		m.sidebar.SetSections(m.pluginsView.GetSidebarSections())
 	case TabAgents:
 		m.footer.SetActions(m.agentsView.ShortHelp())
 		m.footer.SetMessage(m.agentsView.Message())
@@ -257,6 +271,11 @@ func (m *AppModel) updateActiveView(msg tea.Msg) {
 		m.footer.SetMessage(m.skillsView.Message())
 		m.sidebar.SetSections(m.skillsView.GetSidebarSections())
 		m.updateHeaderStats()
+	case TabPlugins:
+		m.pluginsView.Update(msg)
+		m.footer.SetMessage(m.pluginsView.Message())
+		m.sidebar.SetSections(m.pluginsView.GetSidebarSections())
+		m.updateHeaderStats()
 	case TabAgents:
 		m.agentsView.Update(msg)
 		m.footer.SetMessage(m.agentsView.Message())
@@ -271,6 +290,8 @@ func (m *AppModel) getActiveViewContent() string {
 		return m.mcpView.View()
 	case TabSkills:
 		return m.skillsView.View()
+	case TabPlugins:
+		return m.pluginsView.View()
 	case TabAgents:
 		return m.agentsView.View()
 	default:
@@ -286,16 +307,18 @@ func (m *AppModel) updateDimensions() {
 
 	m.mcpView.SetDimensions(m.layout.MainWidth, m.layout.MainHeight)
 	m.skillsView.SetDimensions(m.layout.MainWidth, m.layout.MainHeight)
+	m.pluginsView.SetDimensions(m.layout.MainWidth, m.layout.MainHeight)
 	m.agentsView.SetDimensions(m.layout.MainWidth, m.layout.MainHeight)
 }
 
 func (m *AppModel) updateHeaderStats() {
 	m.header.SetStats(components.HeaderStats{
-		MCPInstalled: m.mcpView.GetInstalledCount(),
-		MCPTotal:     m.mcpView.GetTotalCount(),
-		SkillsCount:  m.skillsView.GetSkillsCount(),
-		AgentsOnline: m.agentsView.GetOnlineCount(),
-		AgentsTotal:  m.agentsView.GetTotalCount(),
+		MCPInstalled:  m.mcpView.GetInstalledCount(),
+		MCPTotal:      m.mcpView.GetTotalCount(),
+		SkillsCount:   m.skillsView.GetSkillsCount(),
+		PluginsCount:  m.pluginsView.GetPluginsCount(),
+		AgentsOnline:  m.agentsView.GetOnlineCount(),
+		AgentsTotal:   m.agentsView.GetTotalCount(),
 	})
 }
 
