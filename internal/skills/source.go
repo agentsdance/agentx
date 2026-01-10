@@ -22,10 +22,45 @@ const (
 
 // SourceInfo contains parsed source information
 type SourceInfo struct {
-	Type     SourceType
-	Path     string // Local path (absolute)
-	RepoURL  string // Git repository URL
-	Fragment string // Skill name for repo#skill-name format
+	Type      SourceType
+	Path      string // Local path (absolute)
+	RepoURL   string // Git repository URL
+	Fragment  string // Skill name for repo#skill-name format
+	SkillPath string // Path within repo (for tree URLs like github.com/org/repo/tree/branch/path/to/skill)
+}
+
+// parseGitHubTreeURL parses a GitHub tree URL like:
+// https://github.com/org/repo/tree/branch/path/to/skill
+// Returns repoURL, skillPath, and whether it was a tree URL
+func parseGitHubTreeURL(source string) (repoURL string, skillPath string, isTreeURL bool) {
+	// Check if it's a GitHub tree URL
+	if !strings.Contains(source, "github.com") {
+		return "", "", false
+	}
+
+	u, err := url.Parse(source)
+	if err != nil {
+		return "", "", false
+	}
+
+	// Path should be like: /org/repo/tree/branch/path/to/skill
+	parts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
+	if len(parts) < 4 || parts[2] != "tree" {
+		return "", "", false
+	}
+
+	// Extract org, repo, branch, and skill path
+	org := parts[0]
+	repo := parts[1]
+	// branch := parts[3] // We don't need branch for cloning (will use default)
+
+	// Skill path is everything after the branch
+	if len(parts) > 4 {
+		skillPath = strings.Join(parts[4:], "/")
+	}
+
+	repoURL = fmt.Sprintf("https://github.com/%s/%s", org, repo)
+	return repoURL, skillPath, true
 }
 
 // ParseSource parses a skill source string into SourceInfo
@@ -47,6 +82,21 @@ func ParseSource(source string) (*SourceInfo, error) {
 				Path: absPath,
 			}, nil
 		}
+	}
+
+	// Check if it's a GitHub tree URL first
+	if repoURL, skillPath, isTreeURL := parseGitHubTreeURL(source); isTreeURL {
+		if skillPath != "" {
+			return &SourceInfo{
+				Type:      SourceTypeGitRepoWithFragment,
+				RepoURL:   repoURL,
+				SkillPath: skillPath,
+			}, nil
+		}
+		return &SourceInfo{
+			Type:    SourceTypeGitRepo,
+			RepoURL: repoURL,
+		}, nil
 	}
 
 	// Check for fragment (repo#skill-name)

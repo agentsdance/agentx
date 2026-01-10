@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/agentsdance/agentx/internal/config"
+	"github.com/agentsdance/agentx/internal/skills"
 )
 
 // ClaudeAgent represents Claude Code agent
@@ -103,4 +104,28 @@ func (a *ClaudeAgent) RemoveContext7() error {
 	}
 	config.RemoveContext7MCP(cfg)
 	return config.WriteConfig(a.configPath, cfg)
+}
+
+func (a *ClaudeAgent) SupportsSkills() bool {
+	return true
+}
+
+func (a *ClaudeAgent) HasSkill(skillName string) (bool, error) {
+	mgr := skills.NewSkillManager()
+	skill, err := mgr.Get(skillName)
+	if err != nil {
+		return false, nil // Not found is not an error
+	}
+	return skill != nil, nil
+}
+
+func (a *ClaudeAgent) InstallSkill(skillName, source string) error {
+	mgr := skills.NewSkillManager()
+	_, err := mgr.Install(source, skills.ScopePersonal)
+	return err
+}
+
+func (a *ClaudeAgent) RemoveSkill(skillName string) error {
+	mgr := skills.NewSkillManager()
+	return mgr.Remove(skillName, skills.ScopePersonal)
 }

@@ -97,3 +97,19 @@ func (a *CursorAgent) RemoveMCP(name string) error {
 	config.RemoveMCP(cfg, name)
 	return config.WriteConfig(a.configPath, cfg)
 }
+
+func (a *CursorAgent) SupportsSkills() bool {
+	return false
+}
+
+func (a *CursorAgent) HasSkill(skillName string) (bool, error) {
+	return false, nil
+}
+
+func (a *CursorAgent) InstallSkill(skillName, source string) error {
+	return nil
+}
+
+func (a *CursorAgent) RemoveSkill(skillName string) error {
+	return nil
+}

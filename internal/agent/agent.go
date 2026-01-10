@@ -20,6 +20,14 @@ type Agent interface {
 	InstallContext7() error
 	// RemoveContext7 removes Context7 MCP from the config
 	RemoveContext7() error
+	// SupportsSkills returns true if the agent supports skills
+	SupportsSkills() bool
+	// HasSkill checks if a skill is installed
+	HasSkill(skillName string) (bool, error)
+	// InstallSkill installs a skill from a source URL
+	InstallSkill(skillName, source string) error
+	// RemoveSkill removes a skill by name
+	RemoveSkill(skillName string) error
 }
 
 // GetAllAgents returns all supported agents

@@ -111,3 +111,19 @@ func (a *GeminiAgent) RemoveContext7() error {
 	config.RemoveContext7MCP(cfg)
 	return config.WriteConfig(a.configPath, cfg)
 }
+
+func (a *GeminiAgent) SupportsSkills() bool {
+	return false
+}
+
+func (a *GeminiAgent) HasSkill(skillName string) (bool, error) {
+	return false, nil
+}
+
+func (a *GeminiAgent) InstallSkill(skillName, source string) error {
+	return nil
+}
+
+func (a *GeminiAgent) RemoveSkill(skillName string) error {
+	return nil
+}

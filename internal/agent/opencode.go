@@ -111,3 +111,19 @@ func (a *OpenCodeAgent) RemoveContext7() error {
 	config.RemoveContext7MCP(cfg)
 	return config.WriteConfig(a.configPath, cfg)
 }
+
+func (a *OpenCodeAgent) SupportsSkills() bool {
+	return false
+}
+
+func (a *OpenCodeAgent) HasSkill(skillName string) (bool, error) {
+	return false, nil
+}
+
+func (a *OpenCodeAgent) InstallSkill(skillName, source string) error {
+	return nil
+}
+
+func (a *OpenCodeAgent) RemoveSkill(skillName string) error {
+	return nil
+}

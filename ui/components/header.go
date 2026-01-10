@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/agentsdance/agentx/ui/theme"
 )
 
 // HeaderStats contains statistics to display in the header
@@ -67,19 +68,14 @@ func (h Header) View() string {
 	leftPart := title + subtitle
 	leftWidth := lipgloss.Width(leftPart)
 	statsWidth := lipgloss.Width(stats)
-	spacing := h.width - leftWidth - statsWidth - 2
-	if spacing < 0 {
-		spacing = 1
-	}
-
-	spacer := lipgloss.NewStyle().Width(spacing).Render("")
-
-	row := lipgloss.JoinHorizontal(lipgloss.Center, leftPart, spacer, stats)
-
+	
+	// Ensure we fill the entire width with the background color
 	return lipgloss.NewStyle().
 		Width(h.width).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderBottom(true).
-		BorderForeground(lipgloss.Color("#374151")).
-		Render(row)
+		Background(theme.HeaderBgColor).
+		Render(lipgloss.JoinHorizontal(lipgloss.Center,
+			leftPart,
+			lipgloss.NewStyle().Width(h.width-leftWidth-statsWidth).Render(""),
+			stats,
+		))
 }
