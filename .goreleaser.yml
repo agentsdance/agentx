@@ -1,0 +1,82 @@
+# GoReleaser configuration for agentx
+# Documentation: https://goreleaser.com
+
+version: 2
+
+project_name: agentx
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: agentx
+    main: .
+    binary: agentx
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/agentsdance/agentx/internal/version.Version={{.Version}}
+      - -X github.com/agentsdance/agentx/internal/version.GitCommit={{.ShortCommit}}
+      - -X github.com/agentsdance/agentx/internal/version.BuildDate={{.Date}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: agentsdance
+    name: agentx
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+
+brews:
+  - name: agentx
+    repository:
+      owner: agentsdance
+      name: agentx
+    folder: Formula
+    homepage: "https://github.com/agentsdance/agentx"
+    description: "CLI tool for managing MCP servers and skills across AI coding agents"
+    license: "Apache-2.0"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    install: |
+      bin.install "agentx"
+    test: |
+      system "#{bin}/agentx", "--version"
