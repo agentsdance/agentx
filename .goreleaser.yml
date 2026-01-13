@@ -69,7 +69,7 @@ brews:
     repository:
       owner: agentsdance
       name: agentx
-    folder: Formula
+    directory: Formula
     homepage: "https://github.com/agentsdance/agentx"
     description: "CLI tool for managing MCP servers and skills across AI coding agents"
     license: "Apache-2.0"
