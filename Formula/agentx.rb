@@ -8,42 +8,48 @@
 #   brew install --build-from-source ./Formula/agentx.rb
 #
 # After publishing, users can install via:
-#   brew tap agentsdance/tap
+#   brew tap agentsdance/agentx
 #   brew install agentx
 
 class Agentx < Formula
   desc "CLI tool for managing MCP servers and skills across AI coding agents"
   homepage "https://github.com/agentsdance/agentx"
   license "Apache-2.0"
-  version "0.0.1"
+  version "0.0.7"
 
   on_macos do
     on_intel do
       url "https://github.com/agentsdance/agentx/releases/download/v#{version}/agentx_#{version}_darwin_amd64.tar.gz"
-      # sha256 will be auto-populated by GoReleaser
-      sha256 "PLACEHOLDER_SHA256_DARWIN_AMD64"
+      sha256 "6b7181fab5420bd6675e042cf5db5ba02809099fe49057bd1e1cae79c9e8de21"
     end
 
     on_arm do
       url "https://github.com/agentsdance/agentx/releases/download/v#{version}/agentx_#{version}_darwin_arm64.tar.gz"
-      # sha256 will be auto-populated by GoReleaser
-      sha256 "PLACEHOLDER_SHA256_DARWIN_ARM64"
+      sha256 "e5ca1aed035684a8c6d672399718418b350f433ba2a72766bd781df99252e6ee"
     end
   end
 
   on_linux do
     on_intel do
       url "https://github.com/agentsdance/agentx/releases/download/v#{version}/agentx_#{version}_linux_amd64.tar.gz"
-      sha256 "PLACEHOLDER_SHA256_LINUX_AMD64"
+      sha256 "19038bde1de5a4bc761c810762d0cdecdadbe85a21799896280951c24e2844a1"
     end
 
     on_arm do
       url "https://github.com/agentsdance/agentx/releases/download/v#{version}/agentx_#{version}_linux_arm64.tar.gz"
-      sha256 "PLACEHOLDER_SHA256_LINUX_ARM64"
+      sha256 "3f2da0a3b3e6880f4af2dbbab07d1fc88998c1bf8cf387d12e9928398d7568e4"
     end
   end
 
+  head do
+    url "https://github.com/agentsdance/agentx.git", branch: "master"
+    depends_on "go" => :build
+  end
+
   def install
+    if build.head?
+      system "go", "build", "-ldflags", "-s -w -X github.com/agentsdance/agentx/internal/version.Version=head", "-o", "agentx", "."
+    end
     bin.install "agentx"
   end
 

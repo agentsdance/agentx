@@ -66,10 +66,14 @@ release:
 
 brews:
   - name: agentx
+    skip_upload: "{{ if .Env.GH_PAT }}false{{ else }}true{{ end }}"
     repository:
       owner: agentsdance
       name: agentx
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+      token: "{{ .Env.GH_PAT }}"
+      pull_request:
+        enabled: true
+        base: master
     directory: Formula
     homepage: "https://github.com/agentsdance/agentx"
     description: "CLI tool for managing MCP servers and skills across AI coding agents"
@@ -77,7 +81,16 @@ brews:
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
+    # This ensures "brew install --HEAD" works
+    custom_block: |
+      head do
+        url "https://github.com/agentsdance/agentx.git", branch: "master"
+        depends_on "go" => :build
+      end
     install: |
+      if build.head?
+        system "go", "build", "-ldflags", "-s -w -X github.com/agentsdance/agentx/internal/version.Version=head", "-o", "agentx", "."
+      end
       bin.install "agentx"
     test: |
       system "#{bin}/agentx", "--version"
