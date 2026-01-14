@@ -82,11 +82,23 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
+          # Create a new branch for the formula update
+          BRANCH_NAME="homebrew-${{ steps.release.outputs.version }}"
+          git checkout -b "$BRANCH_NAME"
+
           git add Formula/agentx.rb
 
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
             git commit -m "chore: update homebrew formula to ${{ steps.release.outputs.version }}"
-            git push origin HEAD:master
+            git push origin "$BRANCH_NAME"
+
+            # Create PR using GitHub CLI
+            gh pr create --title "chore: update homebrew formula to ${{ steps.release.outputs.version }}" \
+              --body "Automated PR to update Homebrew formula for release ${{ steps.release.outputs.version }}" \
+              --base master \
+              --head "$BRANCH_NAME"
           fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
