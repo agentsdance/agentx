@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   goreleaser:
@@ -31,3 +32,84 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_PAT: ${{ secrets.GH_PAT }}
+
+      - name: Get version and SHA256
+        id: release
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/$VERSION.tar.gz"
+          SHA256=$(curl -sL "$TARBALL_URL" | sha256sum | cut -d' ' -f1)
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew Formula
+        run: |
+          VERSION=${{ steps.release.outputs.version }}
+          SHA256=${{ steps.release.outputs.sha256 }}
+
+          mkdir -p Formula
+
+          cat > Formula/agentx.rb << EOF
+          # typed: false
+          # frozen_string_literal: true
+
+          class Agentx < Formula
+            desc "CLI tool for managing MCP servers and skills across AI coding agents"
+            homepage "https://github.com/${{ github.repository }}"
+            url "https://github.com/${{ github.repository }}/archive/refs/tags/$VERSION.tar.gz"
+            sha256 "$SHA256"
+            license "Apache-2.0"
+            head "https://github.com/${{ github.repository }}.git", branch: "master"
+
+            depends_on "go" => :build
+
+            def install
+              ldflags = %W[
+                -s -w
+                -X github.com/agentsdance/agentx/internal/version.Version=#{version}
+              ]
+              system "go", "build", *std_go_args(ldflags: ldflags)
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/agentx version")
+            end
+          end
+          EOF
+
+      - name: Commit and push Formula
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          # Create a new branch for the formula update
+          BRANCH_NAME="homebrew-${{ steps.release.outputs.version }}"
+
+          # Delete remote branch if it exists (from a previous failed run)
+          git push origin --delete "$BRANCH_NAME" 2>/dev/null || true
+
+          git checkout -b "$BRANCH_NAME"
+
+          git add Formula/agentx.rb
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update homebrew formula to ${{ steps.release.outputs.version }}"
+            git push origin "$BRANCH_NAME"
+
+            # Create PR using GitHub CLI (may fail if Actions doesn't have PR permissions)
+            # To enable: Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests
+            if gh pr create --title "chore: update homebrew formula to ${{ steps.release.outputs.version }}" \
+              --body "Automated PR to update Homebrew formula for release ${{ steps.release.outputs.version }}" \
+              --base master \
+              --head "$BRANCH_NAME"; then
+              echo "✅ PR created successfully"
+            else
+              echo "⚠️ Could not create PR automatically. Please create PR manually from branch: $BRANCH_NAME"
+              echo "   Or enable PR creation in Settings → Actions → General → Workflow permissions"
+            fi
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
