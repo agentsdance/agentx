@@ -41,8 +41,8 @@ It provides both a command-line interface and an interactive terminal UI (TUI) f
 ### Homebrew (macOS/Linux)
 
 ```bash
-# Add the tap
-brew tap agentsdance/agentx
+# Add the tap (points to this repo)
+brew tap agentsdance/agentx https://github.com/agentsdance/agentx.git
 
 # Install agentx
 brew install agentx
