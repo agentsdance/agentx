@@ -3,6 +3,11 @@ name: Update Homebrew Formula
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.0.6)'
+        required: true
 
 jobs:
   update-homebrew:
@@ -16,7 +21,11 @@ jobs:
       - name: Get release info
         id: release
         run: |
-          VERSION=${{ github.event.release.tag_name }}
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION=${{ github.event.inputs.version }}
+          else
+            VERSION=${{ github.event.release.tag_name }}
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
           # Download and calculate SHA256
