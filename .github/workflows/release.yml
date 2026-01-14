@@ -31,3 +31,62 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_PAT: ${{ secrets.GH_PAT }}
+
+      - name: Get version and SHA256
+        id: release
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/$VERSION.tar.gz"
+          SHA256=$(curl -sL "$TARBALL_URL" | sha256sum | cut -d' ' -f1)
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew Formula
+        run: |
+          VERSION=${{ steps.release.outputs.version }}
+          SHA256=${{ steps.release.outputs.sha256 }}
+
+          mkdir -p Formula
+
+          cat > Formula/agentx.rb << EOF
+          # typed: false
+          # frozen_string_literal: true
+
+          class Agentx < Formula
+            desc "CLI tool for managing MCP servers and skills across AI coding agents"
+            homepage "https://github.com/${{ github.repository }}"
+            url "https://github.com/${{ github.repository }}/archive/refs/tags/$VERSION.tar.gz"
+            sha256 "$SHA256"
+            license "Apache-2.0"
+            head "https://github.com/${{ github.repository }}.git", branch: "master"
+
+            depends_on "go" => :build
+
+            def install
+              ldflags = %W[
+                -s -w
+                -X github.com/agentsdance/agentx/internal/version.Version=#{version}
+              ]
+              system "go", "build", *std_go_args(ldflags: ldflags)
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/agentx version")
+            end
+          end
+          EOF
+
+      - name: Commit and push Formula
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add Formula/agentx.rb
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update homebrew formula to ${{ steps.release.outputs.version }}"
+            git push origin HEAD:master
+          fi
