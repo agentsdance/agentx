@@ -1,5 +1,7 @@
 # AgentX
 
+English | [Chinese](README.zh-CN.md)
+
 AgentX stands for Agent eXtension: A unified CLI tool for managing **MCP (Model Context Protocol) Servers** and **Skills** across multiple AI coding agents.
 
 ## Overview
