@@ -42,6 +42,7 @@ type Agent interface {
 func GetAllAgents() []Agent {
 	return []Agent{
 		NewClaudeAgent(),
+		NewCodexAgent(),
 		NewCursorAgent(),
 		NewGeminiAgent(),
 		NewOpenCodeAgent(),
@@ -64,6 +65,8 @@ func matchAgentName(agentName, input string) bool {
 	switch input {
 	case "claude", "claudecode", "claude-code", "claude_code":
 		return agentName == "Claude Code"
+	case "codex", "codexcli", "codex-cli", "codex_cli":
+		return agentName == "Codex"
 	case "cursor":
 		return agentName == "Cursor"
 	case "gemini", "geminicli", "gemini-cli", "gemini_cli":

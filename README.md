@@ -7,6 +7,7 @@ AgentX stands for Agent eXtension: A unified CLI tool for managing **MCP (Model 
 AgentX simplifies the installation, management, and monitoring of MCP servers and skills across popular AI coding tools:
 
 - **Claude Code**
+- **Codex**
 - **Cursor**
 - **Gemini CLI**
 - **OpenCode**
@@ -23,9 +24,9 @@ It provides both a command-line interface and an interactive terminal UI (TUI) f
   - **Playwright** - Browser automation capabilities
   - **Context7** - Library documentation access
 
-### Claude Code Skills Management
+### Claude Code & Codex Skills Management
 - Install skills from local paths or Git repositories
-- Support for skill directories (with `SKILL.md`) and command files (`.md`)
+- Support for skill directories (with `SKILL.md`); Claude Code also supports command files (`.md`)
 - Install from GitHub URLs with tree fragments
 - Personal and project scope management
 - Skills health checking and validation
@@ -105,16 +106,26 @@ The tool responds to: `agentx`, `agents`, or `ax`
 | Agent | Config Path |
 |-------|-------------|
 | Claude Code | `~/.claude.json` |
+| Codex | `~/.codex/config.toml` |
 | Cursor | `~/.cursor/mcp.json` |
 | Gemini CLI | `~/.gemini/settings.json` |
 | OpenCode | `~/.opencode/config.json` |
 
 ### Skills Storage
 
+Claude Code:
+
 | Scope | Skills Directory | Commands Directory |
 |-------|------------------|-------------------|
 | Personal | `~/.claude/skills/` | `~/.claude/commands/` |
 | Project | `.claude/skills/` | `.claude/commands/` |
+
+Codex:
+
+| Scope | Skills Directory |
+|-------|------------------|
+| Personal | `$CODEX_HOME/skills/` (default `~/.codex/skills/`) |
+| Project | `.codex/skills/` |
 
 ## Project Structure
 
@@ -122,7 +133,7 @@ The tool responds to: `agentx`, `agents`, or `ax`
 agentx/
 ├── cmd/                    # CLI commands
 ├── internal/
-│   ├── agent/             # Agent implementations (Claude, Cursor, Gemini, OpenCode)
+│   ├── agent/             # Agent implementations (Claude, Codex, Cursor, Gemini, OpenCode)
 │   ├── config/            # Configuration management
 │   ├── skills/            # Skills management
 │   ├── mcp/               # MCP-specific logic

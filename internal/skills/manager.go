@@ -9,11 +9,42 @@ import (
 )
 
 // DefaultSkillManager implements SkillManager
-type DefaultSkillManager struct{}
+type DefaultSkillManager struct {
+	getCommandsDir   func(scope SkillScope) (string, error)
+	getSkillsDir     func(scope SkillScope) (string, error)
+	supportsCommands bool
+}
 
 // NewSkillManager creates a new skill manager
 func NewSkillManager() *DefaultSkillManager {
-	return &DefaultSkillManager{}
+	return &DefaultSkillManager{
+		getCommandsDir:   GetCommandsDir,
+		getSkillsDir:     GetSkillsDir,
+		supportsCommands: true,
+	}
+}
+
+// NewCodexSkillManager creates a new skill manager for Codex
+func NewCodexSkillManager() *DefaultSkillManager {
+	return &DefaultSkillManager{
+		getCommandsDir:   GetCodexCommandsDir,
+		getSkillsDir:     GetCodexSkillsDir,
+		supportsCommands: false,
+	}
+}
+
+func (m *DefaultSkillManager) commandsDir(scope SkillScope) (string, error) {
+	if m.getCommandsDir == nil {
+		return "", fmt.Errorf("commands directory resolver not configured")
+	}
+	return m.getCommandsDir(scope)
+}
+
+func (m *DefaultSkillManager) skillsDir(scope SkillScope) (string, error) {
+	if m.getSkillsDir == nil {
+		return "", fmt.Errorf("skills directory resolver not configured")
+	}
+	return m.getSkillsDir(scope)
 }
 
 // List returns all installed skills from both personal and project scopes
@@ -36,25 +67,27 @@ func (m *DefaultSkillManager) List() ([]Skill, error) {
 func (m *DefaultSkillManager) ListByScope(scope SkillScope) ([]Skill, error) {
 	var skills []Skill
 
-	// List commands (single .md files)
-	commandsDir, err := GetCommandsDir(scope)
-	if err != nil {
-		return nil, err
-	}
+	if m.supportsCommands {
+		// List commands (single .md files)
+		commandsDir, err := m.commandsDir(scope)
+		if err != nil {
+			return nil, err
+		}
 
-	if entries, err := os.ReadDir(commandsDir); err == nil {
-		for _, entry := range entries {
-			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
-				skill, err := m.parseCommandFile(filepath.Join(commandsDir, entry.Name()), scope)
-				if err == nil {
-					skills = append(skills, *skill)
+		if entries, err := os.ReadDir(commandsDir); err == nil {
+			for _, entry := range entries {
+				if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
+					skill, err := m.parseCommandFile(filepath.Join(commandsDir, entry.Name()), scope)
+					if err == nil {
+						skills = append(skills, *skill)
+					}
 				}
 			}
 		}
 	}
 
 	// List skills (directories with SKILL.md)
-	skillsDir, err := GetSkillsDir(scope)
+	skillsDir, err := m.skillsDir(scope)
 	if err != nil {
 		return nil, err
 	}
@@ -101,15 +134,17 @@ func (m *DefaultSkillManager) Install(source string, scope SkillScope) (*Skill, 
 
 // Remove removes a skill by name
 func (m *DefaultSkillManager) Remove(name string, scope SkillScope) error {
-	// Try removing from commands
-	commandsDir, _ := GetCommandsDir(scope)
-	commandPath := filepath.Join(commandsDir, name+".md")
-	if _, err := os.Stat(commandPath); err == nil {
-		return os.Remove(commandPath)
+	if m.supportsCommands {
+		// Try removing from commands
+		commandsDir, _ := m.commandsDir(scope)
+		commandPath := filepath.Join(commandsDir, name+".md")
+		if _, err := os.Stat(commandPath); err == nil {
+			return os.Remove(commandPath)
+		}
 	}
 
 	// Try removing from skills
-	skillsDir, _ := GetSkillsDir(scope)
+	skillsDir, _ := m.skillsDir(scope)
 	skillPath := filepath.Join(skillsDir, name)
 	if _, err := os.Stat(skillPath); err == nil {
 		return os.RemoveAll(skillPath)
@@ -252,6 +287,9 @@ func (m *DefaultSkillManager) installFromLocal(sourcePath string, scope SkillSco
 
 	// It's a command file
 	if strings.HasSuffix(sourcePath, ".md") {
+		if !m.supportsCommands {
+			return nil, fmt.Errorf("command files are not supported for this agent")
+		}
 		return m.installCommandFile(sourcePath, scope)
 	}
 
@@ -297,6 +335,9 @@ func (m *DefaultSkillManager) installFromGit(repoURL, fragment, skillPath string
 		}
 		// Check if it's a command file
 		if isCommandFile(targetPath + ".md") {
+			if !m.supportsCommands {
+				return nil, fmt.Errorf("command files are not supported for this agent")
+			}
 			skill, err := m.installCommandFile(targetPath+".md", scope)
 			if err != nil {
 				return nil, err
@@ -310,20 +351,23 @@ func (m *DefaultSkillManager) installFromGit(repoURL, fragment, skillPath string
 	// Find the skill in the repository using fragment
 	foundPath, err := FindSkillInRepo(tmpDir, lookupName)
 	if err != nil {
-		// Maybe it's a command file
-		cmdPath, cmdErr := FindCommandInRepo(tmpDir, lookupName)
-		if cmdErr != nil {
-			return nil, err // Return original error
+		if m.supportsCommands {
+			// Maybe it's a command file
+			cmdPath, cmdErr := FindCommandInRepo(tmpDir, lookupName)
+			if cmdErr != nil {
+				return nil, err // Return original error
+			}
+			skill, err := m.installCommandFile(cmdPath, scope)
+			if err != nil {
+				return nil, err
+			}
+			skill.Source = repoURL
+			if fragment != "" {
+				skill.Source = repoURL + "#" + fragment
+			}
+			return skill, nil
 		}
-		skill, err := m.installCommandFile(cmdPath, scope)
-		if err != nil {
-			return nil, err
-		}
-		skill.Source = repoURL
-		if fragment != "" {
-			skill.Source = repoURL + "#" + fragment
-		}
-		return skill, nil
+		return nil, err
 	}
 
 	skill, err := m.installSkillDir(foundPath, scope)
@@ -346,7 +390,7 @@ func (m *DefaultSkillManager) installSkillDir(sourcePath string, scope SkillScop
 	}
 
 	// Get target directory
-	skillsDir, err := GetSkillsDir(scope)
+	skillsDir, err := m.skillsDir(scope)
 	if err != nil {
 		return nil, err
 	}
@@ -374,6 +418,9 @@ func (m *DefaultSkillManager) installSkillDir(sourcePath string, scope SkillScop
 
 // installCommandFile installs a command .md file
 func (m *DefaultSkillManager) installCommandFile(sourcePath string, scope SkillScope) (*Skill, error) {
+	if !m.supportsCommands {
+		return nil, fmt.Errorf("command files are not supported for this agent")
+	}
 	// Parse the command first to get its name
 	skill, err := m.parseCommandFile(sourcePath, scope)
 	if err != nil {
@@ -381,7 +428,7 @@ func (m *DefaultSkillManager) installCommandFile(sourcePath string, scope SkillS
 	}
 
 	// Get target directory
-	commandsDir, err := GetCommandsDir(scope)
+	commandsDir, err := m.commandsDir(scope)
 	if err != nil {
 		return nil, err
 	}

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/agentsdance/agentx/internal/version"
 	"github.com/agentsdance/agentx/ui"
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
@@ -14,7 +14,7 @@ var rootCmd = &cobra.Command{
 	Aliases: []string{"agents", "ax"},
 	Short:   "Unified MCP Servers & Agent Skills Manager for AI coding agents",
 	Long: `agentx is a CLI tool for managing MCP servers and skills across AI coding agents
-(Claude Code, Cursor, Gemini cli, opencode).
+(Claude Code, Codex, Cursor, Gemini cli, opencode).
 
 Run without arguments to launch the TUI interface.
 
