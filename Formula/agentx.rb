@@ -4,8 +4,8 @@
 class Agentx < Formula
   desc "CLI tool for managing MCP servers and skills across AI coding agents"
   homepage "https://github.com/agentsdance/agentx"
-  url "https://github.com/agentsdance/agentx/archive/refs/tags/v0.0.5.tar.gz"
-  sha256 "387afada91e1dda9700baafd9b0926b0b4617138350a5a0627b92dec73c0d939"
+  url "https://github.com/agentsdance/agentx/archive/refs/tags/v0.0.6.tar.gz"
+  sha256 "60231952b4d070f2256a3e0dec39a4093d33d36920d7bec1342ff5f4508e2142"
   license "Apache-2.0"
   head "https://github.com/agentsdance/agentx.git", branch: "master"
 
