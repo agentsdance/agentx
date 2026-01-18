@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/agentsdance/agentx/internal/agent"
+	"github.com/spf13/cobra"
 )
 
 var agentFlag string
@@ -54,5 +54,5 @@ var installCmd = &cobra.Command{
 }
 
 func init() {
-	installCmd.Flags().StringVarP(&agentFlag, "agent", "a", "", "Target agent (claude, gemini, opencode)")
+	installCmd.Flags().StringVarP(&agentFlag, "agent", "a", "", "Target agent (claude, codex, cursor, gemini, opencode)")
 }

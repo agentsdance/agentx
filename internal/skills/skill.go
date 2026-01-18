@@ -20,7 +20,7 @@ const (
 	ScopeProject SkillScope = "project"
 )
 
-// Skill represents a Claude Code skill or command
+// Skill represents a Claude Code or Codex skill or command
 type Skill struct {
 	Name         string     `json:"name"`
 	Description  string     `json:"description"`

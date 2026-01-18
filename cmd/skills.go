@@ -3,22 +3,31 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
-	"github.com/spf13/cobra"
 	"github.com/agentsdance/agentx/internal/skills"
+	"github.com/spf13/cobra"
 )
 
 var skillsScope string
+var skillsAgent string
 
 var skillsCmd = &cobra.Command{
 	Use:   "skills",
-	Short: "Manage Claude Code skills",
-	Long: `Manage Claude Code skills and slash commands.
+	Short: "Manage Claude Code and Codex skills",
+	Long: `Manage Claude Code and Codex skills and slash commands.
+
+Use --agent to switch between agents (default: Claude Code). Codex does not
+support command files.
 
 Skills are stored in:
   Personal: ~/.claude/skills/ and ~/.claude/commands/
-  Project:  .claude/skills/ and .claude/commands/`,
+  Project:  .claude/skills/ and .claude/commands/
+
+Codex skills are stored in:
+  Personal: $CODEX_HOME/skills/ (default ~/.codex/skills/)
+  Project:  .codex/skills/`,
 }
 
 var skillsListCmd = &cobra.Command{
@@ -26,10 +35,13 @@ var skillsListCmd = &cobra.Command{
 	Short: "List installed skills",
 	Long:  `List all installed skills and commands.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		mgr := skills.NewSkillManager()
+		mgr, err := resolveSkillsManager()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 
 		var skillList []skills.Skill
-		var err error
 
 		if skillsScope != "" {
 			scope := skills.SkillScope(skillsScope)
@@ -90,7 +102,11 @@ The source can be:
 			scope = skills.ScopeProject
 		}
 
-		mgr := skills.NewSkillManager()
+		mgr, err := resolveSkillsManager()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 		skill, err := mgr.Install(source, scope)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -117,7 +133,11 @@ var skillsRemoveCmd = &cobra.Command{
 			scope = skills.ScopeProject
 		}
 
-		mgr := skills.NewSkillManager()
+		mgr, err := resolveSkillsManager()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 		if err := mgr.Remove(name, scope); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
@@ -132,7 +152,11 @@ var skillsCheckCmd = &cobra.Command{
 	Short: "Check skills installation status",
 	Long:  `Verify that all installed skills are valid and properly configured.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		mgr := skills.NewSkillManager()
+		mgr, err := resolveSkillsManager()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 		statuses, err := mgr.Check()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -186,9 +210,30 @@ var skillsCheckCmd = &cobra.Command{
 func init() {
 	skillsCmd.PersistentFlags().StringVarP(&skillsScope, "scope", "s", "",
 		"Scope for the operation (personal, project)")
+	skillsCmd.PersistentFlags().StringVarP(&skillsAgent, "agent", "a", "claude",
+		"Target agent for skills (claude, codex)")
 
 	skillsCmd.AddCommand(skillsListCmd)
 	skillsCmd.AddCommand(skillsInstallCmd)
 	skillsCmd.AddCommand(skillsRemoveCmd)
 	skillsCmd.AddCommand(skillsCheckCmd)
+}
+
+func resolveSkillsManager() (*skills.DefaultSkillManager, error) {
+	switch normalizeSkillsAgent(skillsAgent) {
+	case "", "claude", "claudecode":
+		return skills.NewSkillManager(), nil
+	case "codex":
+		return skills.NewCodexSkillManager(), nil
+	default:
+		return nil, fmt.Errorf("unknown agent: %s (use 'claude' or 'codex')", skillsAgent)
+	}
+}
+
+func normalizeSkillsAgent(name string) string {
+	normalized := strings.ToLower(strings.TrimSpace(name))
+	normalized = strings.ReplaceAll(normalized, "-", "")
+	normalized = strings.ReplaceAll(normalized, "_", "")
+	normalized = strings.ReplaceAll(normalized, " ", "")
+	return normalized
 }

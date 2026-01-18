@@ -32,14 +32,15 @@ make clean
 
 ## Architecture
 
-AgentX is a CLI tool for managing MCP servers, skills, and plugins across multiple AI coding agents (Claude Code, Cursor, Gemini CLI, OpenCode).
+AgentX is a CLI tool for managing MCP servers, skills, and plugins across multiple AI coding agents (Claude Code, Codex, Cursor, Gemini CLI, OpenCode).
 
 ### Core Layers
 
 **CLI Layer** (`cmd/`): Cobra-based commands. `root.go` launches the TUI when run without arguments, or delegates to subcommands (`install`, `check`, `list`, `remove`, `skills`, `plugins`).
 
-**Agent Abstraction** (`internal/agent/`): The `Agent` interface defines operations for all supported agents. Each agent (Claude, Cursor, Gemini, OpenCode) implements this interface with its own config file location and format:
+**Agent Abstraction** (`internal/agent/`): The `Agent` interface defines operations for all supported agents. Each agent (Claude, Codex, Cursor, Gemini, OpenCode) implements this interface with its own config file location and format:
 - Claude Code: `~/.claude.json`
+- Codex: `~/.codex/config.toml`
 - Cursor: `~/.cursor/mcp.json`
 - Gemini CLI: `~/.gemini/settings.json`
 - OpenCode: `~/.opencode/config.json`
