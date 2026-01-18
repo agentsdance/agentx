@@ -83,11 +83,8 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-          # Create a new branch for the formula update
-          BRANCH_NAME="homebrew-${{ steps.release.outputs.version }}"
-
-          # Delete remote branch if it exists (from a previous failed run)
-          git push origin --delete "$BRANCH_NAME" 2>/dev/null || true
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          BRANCH_NAME="homebrew-${{ steps.release.outputs.version }}-${{ github.run_id }}"
 
           git checkout -b "$BRANCH_NAME"
 
@@ -99,16 +96,17 @@ jobs:
             git commit -m "chore: update homebrew formula to ${{ steps.release.outputs.version }}"
             git push origin "$BRANCH_NAME"
 
-            # Create PR using GitHub CLI (may fail if Actions doesn't have PR permissions)
-            # To enable: Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests
-            if gh pr create --title "chore: update homebrew formula to ${{ steps.release.outputs.version }}" \
+            PR_URL=$(gh pr create \
+              --title "chore: update homebrew formula to ${{ steps.release.outputs.version }}" \
               --body "Automated PR to update Homebrew formula for release ${{ steps.release.outputs.version }}" \
-              --base master \
-              --head "$BRANCH_NAME"; then
-              echo "✅ PR created successfully"
+              --base "$DEFAULT_BRANCH" \
+              --head "$BRANCH_NAME")
+
+            if gh pr merge --auto --squash "$PR_URL"; then
+              echo "✅ Auto-merge enabled for $PR_URL"
             else
-              echo "⚠️ Could not create PR automatically. Please create PR manually from branch: $BRANCH_NAME"
-              echo "   Or enable PR creation in Settings → Actions → General → Workflow permissions"
+              echo "⚠️ Auto-merge could not be enabled. Please merge PR manually: $PR_URL"
+              echo "   Enable auto-merge in repo settings to make this fully automatic."
             fi
           fi
         env:
