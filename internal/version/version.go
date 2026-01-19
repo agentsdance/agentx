@@ -14,5 +14,18 @@ var (
 
 // GetFullVersion returns formatted version info with commit and build date
 func GetFullVersion() string {
-	return fmt.Sprintf("agentx version %s\nCommit: %s\nBuilt: %s", Version, GitCommit, BuildDate)
+	base := fmt.Sprintf("agentx version %s", Version)
+	if GitCommit == "unknown" && BuildDate == "unknown" {
+		return base
+	}
+	if GitCommit != "unknown" && BuildDate != "unknown" {
+		return fmt.Sprintf("%s\nCommit: %s\nBuilt: %s", base, GitCommit, BuildDate)
+	}
+	if GitCommit != "unknown" {
+		return fmt.Sprintf("%s\nCommit: %s", base, GitCommit)
+	}
+	if BuildDate != "unknown" {
+		return fmt.Sprintf("%s\nBuilt: %s", base, BuildDate)
+	}
+	return base
 }
