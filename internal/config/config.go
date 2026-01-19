@@ -18,6 +18,12 @@ var Context7MCPConfig = map[string]interface{}{
 	"args":    []interface{}{"-y", "@upstash/context7-mcp"},
 }
 
+// RemixIconMCPConfig is the configuration for Remix Icon MCP server
+var RemixIconMCPConfig = map[string]interface{}{
+	"command": "npx",
+	"args":    []interface{}{"-y", "remixicon-mcp"},
+}
+
 // Context7MCPConfigRemote is the remote configuration for Context7 MCP server
 var Context7MCPConfigRemote = map[string]interface{}{
 	"url": "https://mcp.context7.com/mcp",
@@ -110,4 +116,19 @@ func AddContext7MCP(cfg map[string]interface{}) {
 // RemoveContext7MCP removes Context7 MCP from the config
 func RemoveContext7MCP(cfg map[string]interface{}) {
 	RemoveMCP(cfg, "context7")
+}
+
+// HasRemixIconMCP checks if Remix Icon MCP is configured
+func HasRemixIconMCP(cfg map[string]interface{}) bool {
+	return HasMCP(cfg, "remix-icon")
+}
+
+// AddRemixIconMCP adds Remix Icon MCP to the config
+func AddRemixIconMCP(cfg map[string]interface{}) {
+	AddMCP(cfg, "remix-icon", RemixIconMCPConfig)
+}
+
+// RemoveRemixIconMCP removes Remix Icon MCP from the config
+func RemoveRemixIconMCP(cfg map[string]interface{}) {
+	RemoveMCP(cfg, "remix-icon")
 }

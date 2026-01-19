@@ -1,12 +1,15 @@
 package ui
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"context"
+	"time"
+
 	"github.com/agentsdance/agentx/internal/version"
 	"github.com/agentsdance/agentx/ui/components"
 	"github.com/agentsdance/agentx/ui/theme"
 	"github.com/agentsdance/agentx/ui/views"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 const (
@@ -31,11 +34,21 @@ type AppModel struct {
 	footer  components.Footer
 
 	// Layout
-	layout   Layout
+	layout    Layout
 	activeTab int
 
 	// State
 	quitting bool
+
+	// Update state
+	updateAvailable bool
+	updateNotice    version.UpdateNotice
+}
+
+type updateMsg struct {
+	notice    version.UpdateNotice
+	available bool
+	err       error
 }
 
 // NewAppModel creates a new TUI application model
@@ -57,12 +70,12 @@ func NewAppModel() AppModel {
 	// Initialize header
 	header := components.NewHeader("AgentX")
 	header.SetStats(components.HeaderStats{
-		MCPInstalled:  mcpView.GetInstalledCount(),
-		MCPTotal:      mcpView.GetTotalCount(),
-		SkillsCount:   skillsView.GetSkillsCount(),
-		PluginsCount:  pluginsView.GetPluginsCount(),
-		AgentsOnline:  agentsView.GetOnlineCount(),
-		AgentsTotal:   agentsView.GetTotalCount(),
+		MCPInstalled: mcpView.GetInstalledCount(),
+		MCPTotal:     mcpView.GetTotalCount(),
+		SkillsCount:  skillsView.GetSkillsCount(),
+		PluginsCount: pluginsView.GetPluginsCount(),
+		AgentsOnline: agentsView.GetOnlineCount(),
+		AgentsTotal:  agentsView.GetTotalCount(),
 	})
 
 	// Initialize sidebar
@@ -89,12 +102,18 @@ func NewAppModel() AppModel {
 // Init implements tea.Model
 func (m AppModel) Init() tea.Cmd {
 	// Request initial window size
-	return tea.WindowSize()
+	return tea.Batch(tea.WindowSize(), checkForUpdateCmd())
 }
 
 // Update implements tea.Model
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case updateMsg:
+		if msg.err == nil && msg.available {
+			m.updateAvailable = true
+			m.updateNotice = msg.notice
+		}
+
 	case tea.WindowSizeMsg:
 		m.layout = CalculateLayout(msg.Width, msg.Height)
 		m.updateDimensions()
@@ -170,6 +189,19 @@ func (m AppModel) View() string {
 		versionStr = "dev/v0.0.1"
 	}
 
+	statusText := versionStr
+	statusColor := lipgloss.Color("#4B5563")
+	if m.updateAvailable {
+		statusText = "new version " + m.updateNotice.Latest + ", run " + m.updateNotice.Command + " to upgrade"
+		statusColor = lipgloss.Color("#F59E0B")
+	}
+
+	availableWidth := m.layout.SidebarWidth - 4
+	if availableWidth < 0 {
+		availableWidth = 0
+	}
+	statusText = truncateString(statusText, availableWidth)
+
 	rightTop := theme.SidebarStyle.
 		Width(m.layout.SidebarWidth).
 		Height(rightContentHeight).
@@ -178,12 +210,12 @@ func (m AppModel) View() string {
 
 	rightBottom := lipgloss.NewStyle().
 		Background(theme.SidebarBgColor).
-		Foreground(lipgloss.Color("#4B5563")).
+		Foreground(statusColor).
 		Width(m.layout.SidebarWidth).
 		Height(1).
 		Padding(0, 2).
 		Align(lipgloss.Right).
-		Render(versionStr)
+		Render(statusText)
 
 	rightPane := lipgloss.JoinVertical(lipgloss.Left, rightTop, rightBottom)
 
@@ -313,13 +345,36 @@ func (m *AppModel) updateDimensions() {
 
 func (m *AppModel) updateHeaderStats() {
 	m.header.SetStats(components.HeaderStats{
-		MCPInstalled:  m.mcpView.GetInstalledCount(),
-		MCPTotal:      m.mcpView.GetTotalCount(),
-		SkillsCount:   m.skillsView.GetSkillsCount(),
-		PluginsCount:  m.pluginsView.GetPluginsCount(),
-		AgentsOnline:  m.agentsView.GetOnlineCount(),
-		AgentsTotal:   m.agentsView.GetTotalCount(),
+		MCPInstalled: m.mcpView.GetInstalledCount(),
+		MCPTotal:     m.mcpView.GetTotalCount(),
+		SkillsCount:  m.skillsView.GetSkillsCount(),
+		PluginsCount: m.pluginsView.GetPluginsCount(),
+		AgentsOnline: m.agentsView.GetOnlineCount(),
+		AgentsTotal:  m.agentsView.GetTotalCount(),
 	})
+}
+
+func checkForUpdateCmd() tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		notice, available, err := version.CheckForUpdate(ctx)
+		return updateMsg{notice: notice, available: available, err: err}
+	}
+}
+
+func truncateString(value string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return ""
+	}
+	if lipgloss.Width(value) <= maxWidth {
+		return value
+	}
+	runes := []rune(value)
+	if len(runes) <= maxWidth {
+		return value
+	}
+	return string(runes[:maxWidth])
 }
 
 // Run starts the TUI application

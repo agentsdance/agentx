@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/agentsdance/agentx/internal/agent"
+	"github.com/spf13/cobra"
 )
 
 var removeCmd = &cobra.Command{
@@ -14,15 +14,24 @@ var removeCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		serverName := args[0]
-		if serverName != "playwright" {
-			fmt.Printf("Unknown MCP server: %s (only 'playwright' is supported in v1)\n", serverName)
+		if serverName != "playwright" && serverName != "context7" && serverName != "remix-icon" {
+			fmt.Printf("Unknown MCP server: %s (supported: playwright, context7, remix-icon)\n", serverName)
 			return
 		}
 
 		agents := agent.GetAllAgents()
 
 		for _, a := range agents {
-			has, err := a.HasPlaywright()
+			var has bool
+			var err error
+			switch serverName {
+			case "playwright":
+				has, err = a.HasPlaywright()
+			case "context7":
+				has, err = a.HasContext7()
+			case "remix-icon":
+				has, err = a.HasRemixIcon()
+			}
 			if err != nil {
 				fmt.Printf("%-12s error: %v\n", a.Name(), err)
 				continue
@@ -32,7 +41,16 @@ var removeCmd = &cobra.Command{
 				continue
 			}
 
-			if err := a.RemovePlaywright(); err != nil {
+			switch serverName {
+			case "playwright":
+				err = a.RemovePlaywright()
+			case "context7":
+				err = a.RemoveContext7()
+			case "remix-icon":
+				err = a.RemoveRemixIcon()
+			}
+
+			if err != nil {
 				fmt.Printf("%-12s failed: %v\n", a.Name(), err)
 			} else {
 				fmt.Printf("%-12s removed\n", a.Name())

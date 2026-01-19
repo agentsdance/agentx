@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/agentsdance/agentx/internal/agent"
 	"github.com/agentsdance/agentx/ui/components"
 	"github.com/agentsdance/agentx/ui/theme"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // MCPServer represents an MCP server type
@@ -21,6 +21,7 @@ type MCPServer struct {
 var MCPServers = []MCPServer{
 	{Name: "playwright", Description: "Browser automation"},
 	{Name: "context7", Description: "Library documentation"},
+	{Name: "remix-icon", Description: "Icon library"},
 }
 
 // AgentMCPStatus represents an agent's MCP installation status
@@ -29,8 +30,10 @@ type AgentMCPStatus struct {
 	Exists          bool
 	PlaywrightOK    bool
 	Context7OK      bool
+	RemixIconOK     bool
 	PlaywrightError error
 	Context7Error   error
+	RemixIconError  error
 }
 
 // MCPView displays MCP server installation status across code agents
@@ -51,13 +54,16 @@ func NewMCPView() *MCPView {
 	for i, a := range agents {
 		pwOK, pwErr := a.HasPlaywright()
 		c7OK, c7Err := a.HasContext7()
+		riOK, riErr := a.HasRemixIcon()
 		statuses[i] = AgentMCPStatus{
 			Agent:           a,
 			Exists:          a.Exists(),
 			PlaywrightOK:    pwOK,
 			Context7OK:      c7OK,
+			RemixIconOK:     riOK,
 			PlaywrightError: pwErr,
 			Context7Error:   c7Err,
+			RemixIconError:  riErr,
 		}
 	}
 
@@ -133,6 +139,17 @@ func (v *MCPView) installSelected() {
 		} else {
 			v.message = fmt.Sprintf("%s already has Context7", agentName)
 		}
+	case 2: // Remix Icon
+		if !status.RemixIconOK {
+			if err := status.Agent.InstallRemixIcon(); err != nil {
+				v.message = fmt.Sprintf("Failed to install Remix Icon: %v", err)
+			} else {
+				v.message = fmt.Sprintf("Installed Remix Icon to %s", agentName)
+				v.refreshStatus()
+			}
+		} else {
+			v.message = fmt.Sprintf("%s already has Remix Icon", agentName)
+		}
 	}
 }
 
@@ -151,6 +168,12 @@ func (v *MCPView) installAllForSelectedMCP() {
 		case 1: // Context7
 			if !v.agents[i].Context7OK {
 				if err := v.agents[i].Agent.InstallContext7(); err == nil {
+					installed++
+				}
+			}
+		case 2: // Remix Icon
+			if !v.agents[i].RemixIconOK {
+				if err := v.agents[i].Agent.InstallRemixIcon(); err == nil {
 					installed++
 				}
 			}
@@ -186,6 +209,17 @@ func (v *MCPView) removeSelected() {
 			}
 		} else {
 			v.message = fmt.Sprintf("%s doesn't have Context7", agentName)
+		}
+	case 2: // Remix Icon
+		if status.RemixIconOK {
+			if err := status.Agent.RemoveRemixIcon(); err != nil {
+				v.message = fmt.Sprintf("Failed to remove Remix Icon: %v", err)
+			} else {
+				v.message = fmt.Sprintf("Removed Remix Icon from %s", agentName)
+				v.refreshStatus()
+			}
+		} else {
+			v.message = fmt.Sprintf("%s doesn't have Remix Icon", agentName)
 		}
 	}
 }
@@ -277,6 +311,9 @@ func (v *MCPView) View() string {
 			case 1: // Context7
 				installed = status.Context7OK
 				err = status.Context7Error
+			case 2: // Remix Icon
+				installed = status.RemixIconOK
+				err = status.RemixIconError
 			}
 
 			var cellContent string
@@ -349,7 +386,7 @@ func (v *MCPView) ShortHelp() []components.FooterAction {
 }
 
 func (v *MCPView) GetSidebarSections() []components.SidebarSection {
-	var playwrightAgents, context7Agents []string
+	var playwrightAgents, context7Agents, remixIconAgents []string
 
 	for _, s := range v.agents {
 		if s.PlaywrightOK {
@@ -358,11 +395,15 @@ func (v *MCPView) GetSidebarSections() []components.SidebarSection {
 		if s.Context7OK {
 			context7Agents = append(context7Agents, s.Agent.Name())
 		}
+		if s.RemixIconOK {
+			remixIconAgents = append(remixIconAgents, s.Agent.Name())
+		}
 	}
 
 	return []components.SidebarSection{
 		{Title: "Playwright", Items: playwrightAgents},
 		{Title: "Context7", Items: context7Agents},
+		{Title: "Remix Icon", Items: remixIconAgents},
 	}
 }
 
@@ -374,10 +415,13 @@ func (v *MCPView) refreshStatus() {
 	for i := range v.agents {
 		pwOK, pwErr := v.agents[i].Agent.HasPlaywright()
 		c7OK, c7Err := v.agents[i].Agent.HasContext7()
+		riOK, riErr := v.agents[i].Agent.HasRemixIcon()
 		v.agents[i].PlaywrightOK = pwOK
 		v.agents[i].Context7OK = c7OK
+		v.agents[i].RemixIconOK = riOK
 		v.agents[i].PlaywrightError = pwErr
 		v.agents[i].Context7Error = c7Err
+		v.agents[i].RemixIconError = riErr
 		v.agents[i].Exists = v.agents[i].Agent.Exists()
 	}
 }
@@ -390,6 +434,9 @@ func (v *MCPView) GetInstalledCount() int {
 			count++
 		}
 		if s.Context7OK {
+			count++
+		}
+		if s.RemixIconOK {
 			count++
 		}
 	}

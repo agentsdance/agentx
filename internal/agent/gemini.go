@@ -112,6 +112,45 @@ func (a *GeminiAgent) RemoveContext7() error {
 	return config.WriteConfig(a.configPath, cfg)
 }
 
+func (a *GeminiAgent) HasRemixIcon() (bool, error) {
+	cfg, err := config.ReadConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return config.HasRemixIconMCP(cfg), nil
+}
+
+func (a *GeminiAgent) InstallRemixIcon() error {
+	cfg, err := config.ReadConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			cfg = make(map[string]interface{})
+			if err := os.MkdirAll(filepath.Dir(a.configPath), 0755); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	config.AddRemixIconMCP(cfg)
+	return config.WriteConfig(a.configPath, cfg)
+}
+
+func (a *GeminiAgent) RemoveRemixIcon() error {
+	cfg, err := config.ReadConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	config.RemoveRemixIconMCP(cfg)
+	return config.WriteConfig(a.configPath, cfg)
+}
+
 func (a *GeminiAgent) SupportsSkills() bool {
 	return false
 }
