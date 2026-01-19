@@ -20,6 +20,11 @@ var codexContext7MCPConfig = map[string]interface{}{
 	"args":    []string{"-y", "@upstash/context7-mcp"},
 }
 
+var codexRemixIconMCPConfig = map[string]interface{}{
+	"command": "npx",
+	"args":    []string{"-y", "remixicon-mcp"},
+}
+
 // CodexAgent represents Codex CLI agent
 type CodexAgent struct {
 	configPath string
@@ -120,6 +125,42 @@ func (a *CodexAgent) RemoveContext7() error {
 		return err
 	}
 	removeCodexMCP(cfg, "context7")
+	return config.WriteTOMLConfig(a.configPath, cfg)
+}
+
+func (a *CodexAgent) HasRemixIcon() (bool, error) {
+	cfg, err := config.ReadTOMLConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return hasCodexMCP(cfg, "remix-icon"), nil
+}
+
+func (a *CodexAgent) InstallRemixIcon() error {
+	cfg, err := config.ReadTOMLConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			cfg = make(map[string]interface{})
+		} else {
+			return err
+		}
+	}
+	addCodexMCP(cfg, "remix-icon", codexRemixIconMCPConfig)
+	return config.WriteTOMLConfig(a.configPath, cfg)
+}
+
+func (a *CodexAgent) RemoveRemixIcon() error {
+	cfg, err := config.ReadTOMLConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	removeCodexMCP(cfg, "remix-icon")
 	return config.WriteTOMLConfig(a.configPath, cfg)
 }
 

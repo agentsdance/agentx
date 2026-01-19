@@ -20,6 +20,12 @@ type Agent interface {
 	InstallContext7() error
 	// RemoveContext7 removes Context7 MCP from the config
 	RemoveContext7() error
+	// HasRemixIcon checks if Remix Icon MCP is configured
+	HasRemixIcon() (bool, error)
+	// InstallRemixIcon adds Remix Icon MCP to the config
+	InstallRemixIcon() error
+	// RemoveRemixIcon removes Remix Icon MCP from the config
+	RemoveRemixIcon() error
 	// SupportsSkills returns true if the agent supports skills
 	SupportsSkills() bool
 	// HasSkill checks if a skill is installed

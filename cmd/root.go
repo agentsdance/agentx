@@ -21,6 +21,8 @@ Run without arguments to launch the TUI interface.
 Aliases: agents, ax`,
 	Version: version.GetFullVersion(),
 	Run: func(cmd *cobra.Command, args []string) {
+		maybeHandleUpdateNotice()
+
 		// Launch TUI when no subcommand is provided
 		if err := ui.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)

@@ -59,6 +59,18 @@ func (a *CursorAgent) RemoveContext7() error {
 	return a.RemoveMCP("context7")
 }
 
+func (a *CursorAgent) HasRemixIcon() (bool, error) {
+	return a.HasMCP("remix-icon")
+}
+
+func (a *CursorAgent) InstallRemixIcon() error {
+	return a.InstallMCP("remix-icon", config.RemixIconMCPConfig)
+}
+
+func (a *CursorAgent) RemoveRemixIcon() error {
+	return a.RemoveMCP("remix-icon")
+}
+
 // HasMCP checks if a specific MCP server is configured
 func (a *CursorAgent) HasMCP(name string) (bool, error) {
 	cfg, err := config.ReadConfig(a.configPath)
