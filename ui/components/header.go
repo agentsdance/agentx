@@ -3,9 +3,9 @@ package components
 import (
 	"fmt"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/agentsdance/agentx/internal/version"
 	"github.com/agentsdance/agentx/ui/theme"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // HeaderStats contains statistics to display in the header
@@ -57,10 +57,13 @@ func (h Header) View() string {
 	title := titleStyle.Render(h.title)
 	subtitle := subtitleStyle.Render("Agent Extension: MCP Servers & Agent Skills Manager")
 
-	versionStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#6B7280")).
-		Padding(0, 1)
-	versionStr := versionStyle.Render(version.Version)
+	versionStr := ""
+	if version.Version != "" && version.Version != "dev" {
+		versionStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#6B7280")).
+			Padding(0, 1)
+		versionStr = versionStyle.Render(version.Version)
+	}
 
 	// Build stats string
 	statsStr := fmt.Sprintf(
@@ -76,7 +79,7 @@ func (h Header) View() string {
 	leftPart := title + subtitle + versionStr
 	leftWidth := lipgloss.Width(leftPart)
 	statsWidth := lipgloss.Width(stats)
-	
+
 	// Ensure we fill the entire width with the background color
 	return lipgloss.NewStyle().
 		Width(h.width).

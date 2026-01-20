@@ -132,3 +132,25 @@ func AddRemixIconMCP(cfg map[string]interface{}) {
 func RemoveRemixIconMCP(cfg map[string]interface{}) {
 	RemoveMCP(cfg, "remix-icon")
 }
+
+// GetMCPServers returns MCP servers from the config.
+func GetMCPServers(cfg map[string]interface{}) map[string]map[string]interface{} {
+	result := map[string]map[string]interface{}{}
+	if cfg == nil {
+		return result
+	}
+	mcpServers, ok := cfg["mcpServers"].(map[string]interface{})
+	if !ok {
+		return result
+	}
+	for name, raw := range mcpServers {
+		if raw == nil {
+			continue
+		}
+		if serverCfg, ok := raw.(map[string]interface{}); ok {
+			result[name] = serverCfg
+			continue
+		}
+	}
+	return result
+}

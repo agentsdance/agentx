@@ -71,6 +71,17 @@ func (a *CursorAgent) RemoveRemixIcon() error {
 	return a.RemoveMCP("remix-icon")
 }
 
+func (a *CursorAgent) ListMCPs() (map[string]map[string]interface{}, error) {
+	cfg, err := config.ReadConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return map[string]map[string]interface{}{}, nil
+		}
+		return nil, err
+	}
+	return config.GetMCPServers(cfg), nil
+}
+
 // HasMCP checks if a specific MCP server is configured
 func (a *CursorAgent) HasMCP(name string) (bool, error) {
 	cfg, err := config.ReadConfig(a.configPath)

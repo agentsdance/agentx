@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -162,6 +163,69 @@ func (a *CodexAgent) RemoveRemixIcon() error {
 	}
 	removeCodexMCP(cfg, "remix-icon")
 	return config.WriteTOMLConfig(a.configPath, cfg)
+}
+
+func (a *CodexAgent) HasMCP(name string) (bool, error) {
+	cfg, err := config.ReadTOMLConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return hasCodexMCP(cfg, name), nil
+}
+
+func (a *CodexAgent) InstallMCP(name string, mcpConfig map[string]interface{}) error {
+	if mcpConfig == nil {
+		return fmt.Errorf("missing mcp config")
+	}
+	cfg, err := config.ReadTOMLConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			cfg = make(map[string]interface{})
+		} else {
+			return err
+		}
+	}
+	addCodexMCP(cfg, name, normalizeArgsToStrings(mcpConfig))
+	return config.WriteTOMLConfig(a.configPath, cfg)
+}
+
+func (a *CodexAgent) RemoveMCP(name string) error {
+	cfg, err := config.ReadTOMLConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	removeCodexMCP(cfg, name)
+	return config.WriteTOMLConfig(a.configPath, cfg)
+}
+
+func (a *CodexAgent) ListMCPs() (map[string]map[string]interface{}, error) {
+	cfg, err := config.ReadTOMLConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return map[string]map[string]interface{}{}, nil
+		}
+		return nil, err
+	}
+	result := map[string]map[string]interface{}{}
+	mcpServers, ok := cfg[codexMCPKey].(map[string]interface{})
+	if !ok {
+		return result, nil
+	}
+	for name, raw := range mcpServers {
+		if raw == nil {
+			continue
+		}
+		if serverCfg, ok := raw.(map[string]interface{}); ok {
+			result[name] = serverCfg
+		}
+	}
+	return result, nil
 }
 
 func (a *CodexAgent) SupportsSkills() bool {
