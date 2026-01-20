@@ -2,9 +2,11 @@ package views
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/agentsdance/agentx/internal/agent"
+	"github.com/agentsdance/agentx/internal/config"
 	"github.com/agentsdance/agentx/ui/components"
 	"github.com/agentsdance/agentx/ui/theme"
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,8 +19,14 @@ type MCPServer struct {
 	Description string
 }
 
+const (
+	serverNameWidth = 14
+	cellWidth       = 14
+	rowPrefixWidth  = 2
+)
+
 // Available MCP servers
-var MCPServers = []MCPServer{
+var embeddedMCPServers = []MCPServer{
 	{Name: "playwright", Description: "Browser automation"},
 	{Name: "context7", Description: "Library documentation"},
 	{Name: "remix-icon", Description: "Icon library"},
@@ -26,51 +34,53 @@ var MCPServers = []MCPServer{
 
 // AgentMCPStatus represents an agent's MCP installation status
 type AgentMCPStatus struct {
-	Agent           agent.Agent
-	Exists          bool
-	PlaywrightOK    bool
-	Context7OK      bool
-	RemixIconOK     bool
-	PlaywrightError error
-	Context7Error   error
-	RemixIconError  error
+	Agent     agent.Agent
+	Exists    bool
+	Installed map[string]bool
+	Errors    map[string]error
 }
 
 // MCPView displays MCP server installation status across code agents
 type MCPView struct {
-	agents    []AgentMCPStatus
-	cursorRow int // MCP server row
-	cursorCol int // Agent column
-	width     int
-	height    int
-	message   string
+	agents        []AgentMCPStatus
+	servers       []MCPServer
+	serverConfigs map[string]agent.MCPConfigEntry
+	cursorRow     int // MCP server row
+	cursorCol     int // Agent column
+	width         int
+	height        int
+	message       string
 }
 
 // NewMCPView creates a new MCP view
 func NewMCPView() *MCPView {
 	agents := agent.GetAllAgents()
+	serverConfigs := agent.CollectMCPConfigs(agents)
+	servers := buildMCPServerList(serverConfigs)
 	statuses := make([]AgentMCPStatus, len(agents))
 
 	for i, a := range agents {
-		pwOK, pwErr := a.HasPlaywright()
-		c7OK, c7Err := a.HasContext7()
-		riOK, riErr := a.HasRemixIcon()
+		installed := make(map[string]bool)
+		errors := make(map[string]error)
+		for _, srv := range servers {
+			ok, err := a.HasMCP(srv.Name)
+			installed[srv.Name] = ok
+			errors[srv.Name] = err
+		}
 		statuses[i] = AgentMCPStatus{
-			Agent:           a,
-			Exists:          a.Exists(),
-			PlaywrightOK:    pwOK,
-			Context7OK:      c7OK,
-			RemixIconOK:     riOK,
-			PlaywrightError: pwErr,
-			Context7Error:   c7Err,
-			RemixIconError:  riErr,
+			Agent:     a,
+			Exists:    a.Exists(),
+			Installed: installed,
+			Errors:    errors,
 		}
 	}
 
 	return &MCPView{
-		agents:    statuses,
-		cursorRow: 0,
-		cursorCol: 0,
+		agents:        statuses,
+		servers:       servers,
+		serverConfigs: serverConfigs,
+		cursorRow:     0,
+		cursorCol:     0,
 	}
 }
 
@@ -87,7 +97,7 @@ func (v *MCPView) Update(msg tea.Msg) (View, tea.Cmd) {
 				v.cursorRow--
 			}
 		case "down", "j":
-			if v.cursorRow < len(MCPServers)-1 {
+			if v.cursorRow < len(v.servers)-1 {
 				v.cursorRow++
 			}
 		case "left", "h":
@@ -112,71 +122,77 @@ func (v *MCPView) Update(msg tea.Msg) (View, tea.Cmd) {
 	return v, nil
 }
 
+func buildMCPServerList(discovered map[string]agent.MCPConfigEntry) []MCPServer {
+	servers := make([]MCPServer, 0, len(embeddedMCPServers))
+	servers = append(servers, embeddedMCPServers...)
+
+	embedded := map[string]struct{}{}
+	for _, srv := range embeddedMCPServers {
+		embedded[srv.Name] = struct{}{}
+	}
+
+	extraNames := make([]string, 0, len(discovered))
+	for name := range discovered {
+		if _, ok := embedded[name]; ok {
+			continue
+		}
+		extraNames = append(extraNames, name)
+	}
+	sort.Strings(extraNames)
+
+	for _, name := range extraNames {
+		entry := discovered[name]
+		description := "Detected MCP"
+		if entry.Source != "" {
+			description = fmt.Sprintf("Detected in %s", entry.Source)
+		}
+		servers = append(servers, MCPServer{
+			Name:        name,
+			Description: description,
+		})
+	}
+
+	return servers
+}
+
 func (v *MCPView) installSelected() {
 	status := &v.agents[v.cursorCol]
 	agentName := status.Agent.Name()
-
-	switch v.cursorRow {
-	case 0: // Playwright
-		if !status.PlaywrightOK {
-			if err := status.Agent.InstallPlaywright(); err != nil {
-				v.message = fmt.Sprintf("Failed to install Playwright: %v", err)
-			} else {
-				v.message = fmt.Sprintf("Installed Playwright to %s", agentName)
-				v.refreshStatus()
-			}
-		} else {
-			v.message = fmt.Sprintf("%s already has Playwright", agentName)
-		}
-	case 1: // Context7
-		if !status.Context7OK {
-			if err := status.Agent.InstallContext7(); err != nil {
-				v.message = fmt.Sprintf("Failed to install Context7: %v", err)
-			} else {
-				v.message = fmt.Sprintf("Installed Context7 to %s", agentName)
-				v.refreshStatus()
-			}
-		} else {
-			v.message = fmt.Sprintf("%s already has Context7", agentName)
-		}
-	case 2: // Remix Icon
-		if !status.RemixIconOK {
-			if err := status.Agent.InstallRemixIcon(); err != nil {
-				v.message = fmt.Sprintf("Failed to install Remix Icon: %v", err)
-			} else {
-				v.message = fmt.Sprintf("Installed Remix Icon to %s", agentName)
-				v.refreshStatus()
-			}
-		} else {
-			v.message = fmt.Sprintf("%s already has Remix Icon", agentName)
-		}
+	serverName := v.servers[v.cursorRow].Name
+	if status.Installed[serverName] {
+		v.message = fmt.Sprintf("%s already has %s", agentName, serverName)
+		return
 	}
+
+	cfg := v.configForServer(serverName)
+	if cfg == nil {
+		v.message = fmt.Sprintf("No config found for %s", serverName)
+		return
+	}
+
+	if err := status.Agent.InstallMCP(serverName, cfg); err != nil {
+		v.message = fmt.Sprintf("Failed to install %s: %v", serverName, err)
+		return
+	}
+	v.message = fmt.Sprintf("Installed %s to %s", serverName, agentName)
+	v.refreshStatus()
 }
 
 func (v *MCPView) installAllForSelectedMCP() {
 	installed := 0
-	mcpName := MCPServers[v.cursorRow].Name
+	mcpName := v.servers[v.cursorRow].Name
+	cfg := v.configForServer(mcpName)
+	if cfg == nil {
+		v.message = fmt.Sprintf("No config found for %s", mcpName)
+		return
+	}
 
 	for i := range v.agents {
-		switch v.cursorRow {
-		case 0: // Playwright
-			if !v.agents[i].PlaywrightOK {
-				if err := v.agents[i].Agent.InstallPlaywright(); err == nil {
-					installed++
-				}
-			}
-		case 1: // Context7
-			if !v.agents[i].Context7OK {
-				if err := v.agents[i].Agent.InstallContext7(); err == nil {
-					installed++
-				}
-			}
-		case 2: // Remix Icon
-			if !v.agents[i].RemixIconOK {
-				if err := v.agents[i].Agent.InstallRemixIcon(); err == nil {
-					installed++
-				}
-			}
+		if v.agents[i].Installed[mcpName] {
+			continue
+		}
+		if err := v.agents[i].Agent.InstallMCP(mcpName, cfg); err == nil {
+			installed++
 		}
 	}
 	v.refreshStatus()
@@ -186,42 +202,61 @@ func (v *MCPView) installAllForSelectedMCP() {
 func (v *MCPView) removeSelected() {
 	status := &v.agents[v.cursorCol]
 	agentName := status.Agent.Name()
-
-	switch v.cursorRow {
-	case 0: // Playwright
-		if status.PlaywrightOK {
-			if err := status.Agent.RemovePlaywright(); err != nil {
-				v.message = fmt.Sprintf("Failed to remove Playwright: %v", err)
-			} else {
-				v.message = fmt.Sprintf("Removed Playwright from %s", agentName)
-				v.refreshStatus()
-			}
-		} else {
-			v.message = fmt.Sprintf("%s doesn't have Playwright", agentName)
-		}
-	case 1: // Context7
-		if status.Context7OK {
-			if err := status.Agent.RemoveContext7(); err != nil {
-				v.message = fmt.Sprintf("Failed to remove Context7: %v", err)
-			} else {
-				v.message = fmt.Sprintf("Removed Context7 from %s", agentName)
-				v.refreshStatus()
-			}
-		} else {
-			v.message = fmt.Sprintf("%s doesn't have Context7", agentName)
-		}
-	case 2: // Remix Icon
-		if status.RemixIconOK {
-			if err := status.Agent.RemoveRemixIcon(); err != nil {
-				v.message = fmt.Sprintf("Failed to remove Remix Icon: %v", err)
-			} else {
-				v.message = fmt.Sprintf("Removed Remix Icon from %s", agentName)
-				v.refreshStatus()
-			}
-		} else {
-			v.message = fmt.Sprintf("%s doesn't have Remix Icon", agentName)
-		}
+	serverName := v.servers[v.cursorRow].Name
+	if !status.Installed[serverName] {
+		v.message = fmt.Sprintf("%s doesn't have %s", agentName, serverName)
+		return
 	}
+	if err := status.Agent.RemoveMCP(serverName); err != nil {
+		v.message = fmt.Sprintf("Failed to remove %s: %v", serverName, err)
+		return
+	}
+	v.message = fmt.Sprintf("Removed %s from %s", serverName, agentName)
+	v.refreshStatus()
+}
+
+func (v *MCPView) configForServer(name string) map[string]interface{} {
+	if entry, ok := v.serverConfigs[name]; ok && entry.Config != nil {
+		return entry.Config
+	}
+
+	switch name {
+	case "playwright":
+		return config.PlaywrightMCPConfig
+	case "context7":
+		return config.Context7MCPConfig
+	case "remix-icon":
+		return config.RemixIconMCPConfig
+	default:
+		return nil
+	}
+}
+
+func displayMCPName(name string) string {
+	switch name {
+	case "playwright":
+		return "Playwright"
+	case "context7":
+		return "Context7"
+	case "remix-icon":
+		return "Remix Icon"
+	default:
+		return name
+	}
+}
+
+func truncateMCPName(name string, max int) string {
+	if max <= 0 {
+		return ""
+	}
+	if lipgloss.Width(name) <= max {
+		return name
+	}
+	runes := []rune(name)
+	if len(runes) <= max {
+		return name
+	}
+	return string(runes[:max])
 }
 
 func (v *MCPView) View() string {
@@ -245,15 +280,15 @@ func (v *MCPView) View() string {
 
 	installedStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#10B981")).
-		Width(14)
+		Width(cellWidth)
 
 	notInstalledStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#6B7280")).
-		Width(14)
+		Width(cellWidth)
 
 	errorStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#EF4444")).
-		Width(14)
+		Width(cellWidth)
 
 	selectedRowStyle := lipgloss.NewStyle().
 		Background(theme.SelectionBgColor)
@@ -261,7 +296,7 @@ func (v *MCPView) View() string {
 	cursorCellStyle := lipgloss.NewStyle().
 		Background(theme.SelectionBgColor).
 		Bold(true).
-		Width(14)
+		Width(cellWidth)
 
 	// Header
 	b.WriteString(headerStyle.Render("  MCP Server Status"))
@@ -270,7 +305,7 @@ func (v *MCPView) View() string {
 	b.WriteString("\n")
 
 	// Column headers (Agent names)
-	b.WriteString("                ")
+	b.WriteString(strings.Repeat(" ", serverNameWidth+rowPrefixWidth))
 	for i, status := range v.agents {
 		style := colHeaderStyle
 		if i == v.cursorCol {
@@ -280,12 +315,12 @@ func (v *MCPView) View() string {
 		if len(name) > 12 {
 			name = name[:12]
 		}
-		b.WriteString(style.Width(14).Render(name))
+		b.WriteString(style.Width(cellWidth).Render(name))
 	}
 	b.WriteString("\n")
 
 	// MCP server rows
-	for mcpIdx, mcp := range MCPServers {
+	for mcpIdx, mcp := range v.servers {
 		var row strings.Builder
 
 		// Row cursor
@@ -296,7 +331,8 @@ func (v *MCPView) View() string {
 		}
 
 		// MCP server name
-		row.WriteString(fmt.Sprintf("%-12s", mcp.Name))
+		name := truncateMCPName(mcp.Name, serverNameWidth)
+		row.WriteString(fmt.Sprintf("%-*s", serverNameWidth, name))
 
 		// Status for each agent
 		for agentIdx, status := range v.agents {
@@ -304,17 +340,8 @@ func (v *MCPView) View() string {
 			var err error
 			var notFound bool = !status.Exists
 
-			switch mcpIdx {
-			case 0: // Playwright
-				installed = status.PlaywrightOK
-				err = status.PlaywrightError
-			case 1: // Context7
-				installed = status.Context7OK
-				err = status.Context7Error
-			case 2: // Remix Icon
-				installed = status.RemixIconOK
-				err = status.RemixIconError
-			}
+			installed = status.Installed[mcp.Name]
+			err = status.Errors[mcp.Name]
 
 			var cellContent string
 			var style lipgloss.Style
@@ -386,25 +413,20 @@ func (v *MCPView) ShortHelp() []components.FooterAction {
 }
 
 func (v *MCPView) GetSidebarSections() []components.SidebarSection {
-	var playwrightAgents, context7Agents, remixIconAgents []string
-
-	for _, s := range v.agents {
-		if s.PlaywrightOK {
-			playwrightAgents = append(playwrightAgents, s.Agent.Name())
+	sections := make([]components.SidebarSection, 0, len(v.servers))
+	for _, server := range v.servers {
+		var agents []string
+		for _, s := range v.agents {
+			if s.Installed[server.Name] {
+				agents = append(agents, s.Agent.Name())
+			}
 		}
-		if s.Context7OK {
-			context7Agents = append(context7Agents, s.Agent.Name())
-		}
-		if s.RemixIconOK {
-			remixIconAgents = append(remixIconAgents, s.Agent.Name())
-		}
+		sections = append(sections, components.SidebarSection{
+			Title: displayMCPName(server.Name),
+			Items: agents,
+		})
 	}
-
-	return []components.SidebarSection{
-		{Title: "Playwright", Items: playwrightAgents},
-		{Title: "Context7", Items: context7Agents},
-		{Title: "Remix Icon", Items: remixIconAgents},
-	}
+	return sections
 }
 
 func (v *MCPView) Message() string {
@@ -412,16 +434,27 @@ func (v *MCPView) Message() string {
 }
 
 func (v *MCPView) refreshStatus() {
+	agents := make([]agent.Agent, 0, len(v.agents))
+	for _, status := range v.agents {
+		agents = append(agents, status.Agent)
+	}
+	v.serverConfigs = agent.CollectMCPConfigs(agents)
+	v.servers = buildMCPServerList(v.serverConfigs)
+	if v.cursorRow >= len(v.servers) {
+		v.cursorRow = len(v.servers) - 1
+		if v.cursorRow < 0 {
+			v.cursorRow = 0
+		}
+	}
+
 	for i := range v.agents {
-		pwOK, pwErr := v.agents[i].Agent.HasPlaywright()
-		c7OK, c7Err := v.agents[i].Agent.HasContext7()
-		riOK, riErr := v.agents[i].Agent.HasRemixIcon()
-		v.agents[i].PlaywrightOK = pwOK
-		v.agents[i].Context7OK = c7OK
-		v.agents[i].RemixIconOK = riOK
-		v.agents[i].PlaywrightError = pwErr
-		v.agents[i].Context7Error = c7Err
-		v.agents[i].RemixIconError = riErr
+		v.agents[i].Installed = make(map[string]bool)
+		v.agents[i].Errors = make(map[string]error)
+		for _, server := range v.servers {
+			ok, err := v.agents[i].Agent.HasMCP(server.Name)
+			v.agents[i].Installed[server.Name] = ok
+			v.agents[i].Errors[server.Name] = err
+		}
 		v.agents[i].Exists = v.agents[i].Agent.Exists()
 	}
 }
@@ -430,14 +463,10 @@ func (v *MCPView) refreshStatus() {
 func (v *MCPView) GetInstalledCount() int {
 	count := 0
 	for _, s := range v.agents {
-		if s.PlaywrightOK {
-			count++
-		}
-		if s.Context7OK {
-			count++
-		}
-		if s.RemixIconOK {
-			count++
+		for _, server := range v.servers {
+			if s.Installed[server.Name] {
+				count++
+			}
 		}
 	}
 	return count
@@ -445,5 +474,5 @@ func (v *MCPView) GetInstalledCount() int {
 
 // GetTotalCount returns total possible installations (agents × MCP servers)
 func (v *MCPView) GetTotalCount() int {
-	return len(v.agents) * len(MCPServers)
+	return len(v.agents) * len(v.servers)
 }

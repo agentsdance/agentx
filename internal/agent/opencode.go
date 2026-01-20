@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -149,6 +150,59 @@ func (a *OpenCodeAgent) RemoveRemixIcon() error {
 	}
 	config.RemoveRemixIconMCP(cfg)
 	return config.WriteConfig(a.configPath, cfg)
+}
+
+func (a *OpenCodeAgent) HasMCP(name string) (bool, error) {
+	cfg, err := config.ReadConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return config.HasMCP(cfg, name), nil
+}
+
+func (a *OpenCodeAgent) InstallMCP(name string, mcpConfig map[string]interface{}) error {
+	if mcpConfig == nil {
+		return fmt.Errorf("missing mcp config")
+	}
+	cfg, err := config.ReadConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			cfg = make(map[string]interface{})
+			if err := os.MkdirAll(filepath.Dir(a.configPath), 0755); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	config.AddMCP(cfg, name, cloneMCPConfig(mcpConfig))
+	return config.WriteConfig(a.configPath, cfg)
+}
+
+func (a *OpenCodeAgent) RemoveMCP(name string) error {
+	cfg, err := config.ReadConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	config.RemoveMCP(cfg, name)
+	return config.WriteConfig(a.configPath, cfg)
+}
+
+func (a *OpenCodeAgent) ListMCPs() (map[string]map[string]interface{}, error) {
+	cfg, err := config.ReadConfig(a.configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return map[string]map[string]interface{}{}, nil
+		}
+		return nil, err
+	}
+	return config.GetMCPServers(cfg), nil
 }
 
 func (a *OpenCodeAgent) SupportsSkills() bool {

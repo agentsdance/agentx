@@ -26,6 +26,14 @@ type Agent interface {
 	InstallRemixIcon() error
 	// RemoveRemixIcon removes Remix Icon MCP from the config
 	RemoveRemixIcon() error
+	// HasMCP checks if a specific MCP server is configured
+	HasMCP(name string) (bool, error)
+	// InstallMCP adds a specific MCP server to the config
+	InstallMCP(name string, mcpConfig map[string]interface{}) error
+	// RemoveMCP removes a specific MCP server from the config
+	RemoveMCP(name string) error
+	// ListMCPs returns configured MCP servers
+	ListMCPs() (map[string]map[string]interface{}, error)
 	// SupportsSkills returns true if the agent supports skills
 	SupportsSkills() bool
 	// HasSkill checks if a skill is installed
