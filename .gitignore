@@ -1,3 +1,4 @@
 agentx
 dist/
 checksums.txt
+vendor/

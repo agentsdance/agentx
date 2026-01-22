@@ -1,0 +1,32 @@
+{
+  "name": "@agentsdance/agentx",
+  "version": "0.0.8",
+  "description": "AgentX CLI installer (downloads the native AgentX binary on install)",
+  "license": "MIT",
+  "bin": {
+    "agentx": "bin/agentx.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "vendor/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/install.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}

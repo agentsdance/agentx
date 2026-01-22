@@ -1,0 +1,12 @@
+dist/
+cmd/
+docs/
+internal/
+registry/
+ui/
+Formula/
+*.png
+*.gz
+*.zip
+*.exe
+agentx

@@ -41,7 +41,13 @@ AgentX 简化了在主流 AI 编程工具中安装、管理与监控 MCP 服务�
 
 ## 安装
 
-### 1. Homebrew（macOS/Linux）
+### 1. npm（全局安装）
+
+```bash
+npm install -g @agentsdance/agentx
+```
+
+### 2. Homebrew（macOS/Linux）
 
 ```bash
 # 添加 tap（指向本仓库）
@@ -54,17 +60,17 @@ brew install agentx
 brew upgrade agentx
 ```
 
-### 2. 下载二进制
+### 3. 下载二进制
 
 从 [GitHub Releases](https://github.com/agentsdance/agentx/releases) 下载最新版本。
 
-### 3. Go Install
+### 4. Go Install
 
 ```bash
 go install github.com/agentsdance/agentx@latest
 ```
 
-### 4. 从源码构建
+### 5. 从源码构建
 
 ```bash
 # 克隆仓库
