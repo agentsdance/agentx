@@ -16,6 +16,7 @@ const PKG_ROOT = path.resolve(__dirname, "..");
 const BIN_DIR = path.join(PKG_ROOT, "vendor");
 const BIN_NAME = os.platform() === "win32" ? "agentx.exe" : "agentx";
 const BIN_PATH = path.join(BIN_DIR, BIN_NAME);
+const VERSION_MARKER = path.join(BIN_DIR, ".agentx-version");
 
 const VERSION = require(path.join(PKG_ROOT, "package.json")).version;
 const REPO = "agentsdance/agentx";
@@ -148,7 +149,7 @@ async function main() {
   const { filename, ext, osName, arch } = getAssetInfo();
   await ensureDir(BIN_DIR);
 
-  if (fs.existsSync(BIN_PATH)) {
+  if (await isCurrentVersionInstalled()) {
     return;
   }
 
@@ -166,6 +167,7 @@ async function main() {
   }
   await promoteBinary(found);
   await makeExecutable(BIN_PATH);
+  await fs.promises.writeFile(VERSION_MARKER, VERSION, "utf8");
 }
 
 async function resolveRelease(expectedFilename, osName, arch, ext) {
@@ -246,6 +248,17 @@ async function fetchJson(url, redirects = 0) {
       })
       .on("error", reject);
   });
+}
+
+async function isCurrentVersionInstalled() {
+  try {
+    const marker = await fs.promises.readFile(VERSION_MARKER, "utf8");
+    if (marker.trim() !== VERSION) return false;
+    await fs.promises.access(BIN_PATH, fs.constants.X_OK);
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 main().catch((err) => {
