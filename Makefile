@@ -8,7 +8,7 @@ LDFLAGS := -X github.com/agentsdance/agentx/internal/version.Version=$(VERSION) 
 
 PREFIX ?= /usr/local
 
-.PHONY: build install clean
+.PHONY: build install clean release
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o agentx
@@ -19,3 +19,6 @@ install: build
 
 clean:
 	rm -f agentx
+
+release:
+	npm publish --access public
