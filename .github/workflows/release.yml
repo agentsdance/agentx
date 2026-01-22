@@ -38,6 +38,7 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "npm_version=${VERSION#v}" >> $GITHUB_OUTPUT
 
           TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/$VERSION.tar.gz"
           SHA256=$(curl -sL "$TARBALL_URL" | sha256sum | cut -d' ' -f1)
@@ -78,6 +79,11 @@ jobs:
           end
           EOF
 
+      - name: Update npm package version
+        run: |
+          NPM_VERSION=${{ steps.release.outputs.npm_version }}
+          node -e "const fs=require('fs');const p='package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version='${NPM_VERSION}';fs.writeFileSync(p,JSON.stringify(j,null,2)+'\\n');"
+
       - name: Commit and push Formula
         run: |
           git config --local user.email "action@github.com"
@@ -88,7 +94,7 @@ jobs:
 
           git checkout -b "$BRANCH_NAME"
 
-          git add Formula/agentx.rb
+          git add Formula/agentx.rb package.json
 
           if git diff --staged --quiet; then
             echo "No changes to commit"
