@@ -41,7 +41,13 @@ It provides both a command-line interface and an interactive terminal UI (TUI) f
 
 ## Installation
 
-### 1. Homebrew (macOS/Linux)
+### 1. npm (global install)
+
+```bash
+npm install -g @agentsdance/agentx
+```
+
+### 2. Homebrew (macOS/Linux)
 
 ```bash
 # Add the tap (points to this repo)
@@ -54,17 +60,17 @@ brew install agentx
 brew upgrade agentx
 ```
 
-### 2. Download Binary
+### 3. Download Binary
 
 Download the latest release from [GitHub Releases](https://github.com/agentsdance/agentx/releases).
 
-### 3. Go Install
+### 4. Go Install
 
 ```bash
 go install github.com/agentsdance/agentx@latest
 ```
 
-### 4. Build from Source
+### 5. Build from Source
 
 ```bash
 # Clone the repository
