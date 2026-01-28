@@ -58,6 +58,7 @@ func GetAllAgents() []Agent {
 		NewClaudeAgent(),
 		NewCodexAgent(),
 		NewCursorAgent(),
+		NewDroidAgent(),
 		NewGeminiAgent(),
 		NewOpenCodeAgent(),
 	}
@@ -83,6 +84,8 @@ func matchAgentName(agentName, input string) bool {
 		return agentName == "Codex"
 	case "cursor":
 		return agentName == "Cursor"
+	case "droid", "factory", "factory-droid", "factory_droid":
+		return agentName == "Droid"
 	case "gemini", "geminicli", "gemini-cli", "gemini_cli":
 		return agentName == "Gemini cli"
 	case "opencode", "open-code", "open_code":

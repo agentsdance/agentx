@@ -103,6 +103,39 @@ func GetCodexSkillsDir(scope SkillScope) (string, error) {
 	return filepath.Join(base, "skills"), nil
 }
 
+// GetDroidBasePaths returns the base paths for Factory Droid configuration
+func GetDroidBasePaths() (personal, project string, err error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", "", err
+	}
+
+	personal = filepath.Join(home, ".factory")
+
+	// Project path is relative to current directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		return personal, "", err
+	}
+	project = filepath.Join(cwd, ".factory")
+
+	return personal, project, nil
+}
+
+// GetDroidSkillsDir returns the Droid skills directory for a scope
+func GetDroidSkillsDir(scope SkillScope) (string, error) {
+	personal, project, err := GetDroidBasePaths()
+	if err != nil {
+		return "", err
+	}
+
+	base := personal
+	if scope == ScopeProject {
+		base = project
+	}
+	return filepath.Join(base, "skills"), nil
+}
+
 // EnsureDir creates a directory if it doesn't exist
 func EnsureDir(path string) error {
 	return os.MkdirAll(path, 0755)

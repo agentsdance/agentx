@@ -33,6 +33,15 @@ func NewCodexSkillManager() *DefaultSkillManager {
 	}
 }
 
+// NewDroidSkillManager creates a new skill manager for Factory Droid
+func NewDroidSkillManager() *DefaultSkillManager {
+	return &DefaultSkillManager{
+		getCommandsDir:   nil,
+		getSkillsDir:     GetDroidSkillsDir,
+		supportsCommands: false,
+	}
+}
+
 func (m *DefaultSkillManager) commandsDir(scope SkillScope) (string, error) {
 	if m.getCommandsDir == nil {
 		return "", fmt.Errorf("commands directory resolver not configured")
