@@ -1,0 +1,16 @@
+html {
+  background-color: #18181b;
+  text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #18181b;
+}
+
+#root {
+  min-height: 100vh;
+}
